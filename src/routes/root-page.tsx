@@ -2,6 +2,7 @@ import { ArrowRight, Orbit } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
 
 import { Button } from '@/components/ui/button'
+import { DataDiagnostics } from '@/features/data-diagnostics/components/data-diagnostics'
 import { GalaxyCanvas } from '@/features/galaxy/components/galaxy-canvas'
 import { useExperienceStore } from '@/stores/experience-store'
 
@@ -12,7 +13,7 @@ export function RootPage() {
   const isExploring = mode === 'explore'
 
   return (
-    <main className="relative isolate min-h-svh overflow-hidden bg-background text-foreground">
+    <main className="relative isolate min-h-svh overflow-x-hidden bg-background text-foreground">
       <div className="absolute inset-0 -z-20">
         <GalaxyCanvas
           isActive={isExploring}
@@ -46,7 +47,7 @@ export function RootPage() {
         </header>
 
         <section
-          className="flex flex-1 items-center py-16 sm:py-20"
+          className="grid flex-1 items-center gap-10 py-12 sm:py-16 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] lg:py-20"
           aria-labelledby="page-title"
         >
           <div className="pointer-events-auto max-w-2xl">
@@ -86,6 +87,7 @@ export function RootPage() {
               />
             </Button>
           </div>
+          <DataDiagnostics />
         </section>
 
         <footer className="pointer-events-auto flex flex-col gap-2 border-t border-border/70 pt-4 text-xs leading-5 text-muted-foreground sm:flex-row sm:items-center sm:justify-between">

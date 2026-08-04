@@ -11,6 +11,10 @@ vi.mock('@/features/galaxy/components/galaxy-canvas', () => ({
   GalaxyCanvas: () => <div data-testid="galaxy-canvas" />,
 }))
 
+vi.mock('@/features/data-diagnostics/components/data-diagnostics', () => ({
+  DataDiagnostics: () => <div data-testid="data-diagnostics" />,
+}))
+
 function renderRoute(path = '/') {
   const history = createMemoryHistory({ initialEntries: [path] })
   return render(<App appRouter={createAppRouter(history)} />)

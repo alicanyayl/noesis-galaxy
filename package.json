@@ -17,6 +17,7 @@
     "typecheck": "tsc -b && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest",
     "test:run": "vitest run",
+    "api:smoke": "node --experimental-strip-types scripts/api-smoke.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test:run && pnpm build"
   },
   "dependencies": {
