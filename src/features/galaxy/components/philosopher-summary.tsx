@@ -103,7 +103,7 @@ export function PhilosopherSummaryPanel({
 
   return (
     <aside
-      className="pointer-events-auto w-full max-w-sm rounded-2xl border border-border/80 bg-background/88 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl"
+      className="galaxy-summary pointer-events-auto w-full max-w-sm rounded-2xl border border-border/80 bg-background/88 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl"
       aria-labelledby="selected-philosopher-title"
       aria-live="polite"
     >

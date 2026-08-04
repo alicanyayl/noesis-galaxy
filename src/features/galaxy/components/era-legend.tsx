@@ -10,9 +10,12 @@ export function EraLegend() {
         id="era-legend-title"
         className="text-[0.62rem] font-medium tracking-[0.16em] text-muted-foreground uppercase"
       >
-        Historical eras
+        Historical direction
       </h2>
-      <ul className="mt-2 flex max-w-xl flex-wrap gap-x-3 gap-y-1.5">
+      <p className="mt-1 text-[0.64rem] text-muted-foreground">
+        BCE <span aria-hidden="true">→</span> CE
+      </p>
+      <ol className="mt-2 flex max-w-xl flex-wrap items-center gap-x-2 gap-y-1.5">
         {HISTORICAL_ERAS.map((era) => (
           <li
             key={era.id}
@@ -25,9 +28,14 @@ export function EraLegend() {
               aria-hidden="true"
             />
             {era.label}
+            {era.id !== 'unknown' && era.id !== 'contemporary' ? (
+              <span className="text-muted-foreground/55" aria-hidden="true">
+                →
+              </span>
+            ) : null}
           </li>
         ))}
-      </ul>
+      </ol>
     </section>
   )
 }

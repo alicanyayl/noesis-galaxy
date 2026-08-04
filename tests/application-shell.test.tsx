@@ -59,7 +59,7 @@ describe('Noesis Galaxy application shell', () => {
     ).toBeVisible()
     expect(
       screen.getByText(
-        /Move left to right from antiquity toward the present/,
+        /Horizontal position follows birth year/,
       ),
     ).toBeVisible()
   })
@@ -68,7 +68,7 @@ describe('Noesis Galaxy application shell', () => {
     renderRoute()
 
     expect(
-      await screen.findByRole('button', { name: 'Enter galaxy' }),
+      await screen.findByRole('button', { name: 'Explore freely' }),
     ).toBeEnabled()
   })
 
@@ -77,7 +77,7 @@ describe('Noesis Galaxy application shell', () => {
     renderRoute()
 
     await user.click(
-      await screen.findByRole('button', { name: 'Enter galaxy' }),
+      await screen.findByRole('button', { name: 'Explore freely' }),
     )
 
     expect(

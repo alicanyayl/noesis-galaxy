@@ -1,22 +1,33 @@
 import { Html } from '@react-three/drei'
 import { useMemo } from 'react'
+import { DoubleSide } from 'three'
 
+import type { SceneQuality } from '@/features/galaxy/scene/scene-quality'
+import {
+  GUIDE_VISUAL_CONFIG,
+  SCENE_COLORS,
+} from '@/features/galaxy/scene/scene-visuals'
 import type { GalaxyPhilosopherNode } from '@/features/galaxy/types/galaxy'
 
 interface SchoolLabelsProps {
   nodes: GalaxyPhilosopherNode[]
+  quality: SceneQuality
 }
 
 interface SchoolAggregate {
   key: string
   label: string
   count: number
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
   x: number
   y: number
   z: number
 }
 
-export function SchoolLabels({ nodes }: SchoolLabelsProps) {
+export function SchoolLabels({ nodes, quality }: SchoolLabelsProps) {
   const labels = useMemo(() => {
     const aggregates = new Map<string, SchoolAggregate>()
 
@@ -25,6 +36,10 @@ export function SchoolLabels({ nodes }: SchoolLabelsProps) {
 
       if (current) {
         current.count += 1
+        current.minX = Math.min(current.minX, node.position.x)
+        current.maxX = Math.max(current.maxX, node.position.x)
+        current.minY = Math.min(current.minY, node.position.y)
+        current.maxY = Math.max(current.maxY, node.position.y)
         current.x += node.position.x
         current.y += node.position.y
         current.z += node.position.z
@@ -33,6 +48,10 @@ export function SchoolLabels({ nodes }: SchoolLabelsProps) {
           key: node.schoolKey,
           label: node.schoolLabel,
           count: 1,
+          minX: node.position.x,
+          maxX: node.position.x,
+          minY: node.position.y,
+          maxY: node.position.y,
           x: node.position.x,
           y: node.position.y,
           z: node.position.z,
@@ -42,27 +61,57 @@ export function SchoolLabels({ nodes }: SchoolLabelsProps) {
 
     return [...aggregates.values()]
       .filter((aggregate) => aggregate.count >= 4)
-      .sort((first, second) => second.count - first.count)
-      .slice(0, 5)
+      .sort(
+        (first, second) =>
+          second.count - first.count || first.label.localeCompare(second.label),
+      )
+      .slice(0, quality.visibleSchoolLabelLimit)
       .map((aggregate) => ({
         ...aggregate,
         x: aggregate.x / aggregate.count,
         y: aggregate.y / aggregate.count,
         z: aggregate.z / aggregate.count,
+        radiusX: Math.min(
+          Math.max((aggregate.maxX - aggregate.minX) / 2 + 0.55, 0.9),
+          2.6,
+        ),
+        radiusY: Math.min(
+          Math.max((aggregate.maxY - aggregate.minY) / 2 + 0.42, 0.62),
+          1.15,
+        ),
       }))
-  }, [nodes])
+  }, [nodes, quality.visibleSchoolLabelLimit])
 
-  return labels.map((label) => (
-    <Html
-      key={label.key}
-      center
-      position={[label.x, label.y + 0.78, label.z]}
-      distanceFactor={20}
-      style={{ pointerEvents: 'none' }}
-    >
-      <span className="whitespace-nowrap rounded-full border border-white/10 bg-[#090b16]/65 px-2 py-1 text-[9px] font-medium tracking-[0.08em] text-white/55 backdrop-blur-sm">
-        {label.label} · {label.count}
-      </span>
-    </Html>
+  return labels.map((label, index) => (
+    <group key={label.key}>
+      <mesh
+        position={[label.x, label.y, label.z - 0.45]}
+        scale={[label.radiusX, label.radiusY, 1]}
+      >
+        <ringGeometry args={[0.965, 1, 64]} />
+        <meshBasicMaterial
+          color={SCENE_COLORS.structural}
+          opacity={GUIDE_VISUAL_CONFIG.clusterOpacity}
+          side={DoubleSide}
+          transparent
+          depthWrite={false}
+        />
+      </mesh>
+      <Html
+        center
+        position={[
+          label.x,
+          label.y + label.radiusY + 0.28 + (index % 2) * 0.16,
+          label.z,
+        ]}
+        style={{ pointerEvents: 'none' }}
+      >
+        <span className="galaxy-school-label">
+          {label.label}
+          <span aria-hidden="true"> · </span>
+          {label.count}
+        </span>
+      </Html>
+    </group>
   ))
 }

@@ -2,7 +2,10 @@ import { Canvas } from '@react-three/fiber'
 import { Component, useState, type ReactNode } from 'react'
 
 import { HistoricalGalaxyScene } from '@/features/galaxy/scene/historical-galaxy-scene'
-import type { GalaxyPhilosopherNode } from '@/features/galaxy/types/galaxy'
+import type {
+  GalaxyPhilosopherNode,
+  GalaxyTelemetry,
+} from '@/features/galaxy/types/galaxy'
 import { useExperienceStore } from '@/stores/experience-store'
 
 export interface GalaxyCanvasProps {
@@ -10,6 +13,7 @@ export interface GalaxyCanvasProps {
   nodes: GalaxyPhilosopherNode[]
   selectedPhilosopherId: string | null
   onSelect: (id: string) => void
+  onTelemetry: (telemetry: GalaxyTelemetry) => void
   reducedMotion: boolean
 }
 
@@ -71,6 +75,7 @@ export function GalaxyCanvas({
   nodes,
   selectedPhilosopherId,
   onSelect,
+  onTelemetry,
   reducedMotion,
 }: GalaxyCanvasProps) {
   const [isWebGLAvailable] = useState(supportsWebGL)
@@ -94,7 +99,7 @@ export function GalaxyCanvas({
           active ? 'galaxy-canvas galaxy-canvas--active' : 'galaxy-canvas'
         }
         role="img"
-        camera={{ fov: 44, near: 0.1, far: 120, position: [0, 0, 32] }}
+        camera={{ fov: 42, near: 0.1, far: 220, position: [0, 0, 20] }}
         dpr={[1, 1.5]}
         fallback={<SceneFallback />}
         gl={{
@@ -102,12 +107,16 @@ export function GalaxyCanvas({
           antialias: true,
           powerPreference: 'high-performance',
         }}
+        onPointerMissed={() => {
+          useExperienceStore.getState().setHoveredPhilosopherId(null)
+        }}
       >
         <HistoricalGalaxyScene
           active={active}
           nodes={nodes}
           selectedPhilosopherId={selectedPhilosopherId}
           onSelect={onSelect}
+          onTelemetry={onTelemetry}
           reducedMotion={reducedMotion}
           eraGuidesVisible={eraGuidesVisible}
           labelsVisible={labelsVisible}

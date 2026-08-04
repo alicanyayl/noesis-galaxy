@@ -35,7 +35,7 @@ export function SceneControls({
         onClick={onToggleActive}
       >
         <Focus aria-hidden="true" />
-        {active ? 'Quiet view' : 'Enter galaxy'}
+        {active ? 'Quiet view' : 'Explore freely'}
       </Button>
       <Button
         className="h-9 rounded-full bg-background/55 backdrop-blur-md"
@@ -53,7 +53,7 @@ export function SceneControls({
         onClick={toggleLabels}
       >
         <Tags aria-hidden="true" />
-        Names {labelsVisible ? 'on' : 'off'}
+        Schools {labelsVisible ? 'on' : 'off'}
       </Button>
       <Button
         className="h-9 rounded-full bg-background/55 backdrop-blur-md"

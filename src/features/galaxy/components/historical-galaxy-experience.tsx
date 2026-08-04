@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { AlertCircle, LoaderCircle, Orbit } from 'lucide-react'
+import { AlertCircle, Orbit } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
-import { lazy, Suspense, useCallback, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 
 import { philosophersQueryOptions } from '@/api/philosophers'
 import { Button } from '@/components/ui/button'
@@ -10,7 +16,9 @@ import { AccessiblePhilosopherList } from '@/features/galaxy/components/accessib
 import { EraLegend } from '@/features/galaxy/components/era-legend'
 import { PhilosopherSummaryPanel } from '@/features/galaxy/components/philosopher-summary'
 import { SceneControls } from '@/features/galaxy/components/scene-controls'
+import { SceneLoadingState } from '@/features/galaxy/components/scene-loading-state'
 import { useGalaxyPhilosophers } from '@/features/galaxy/hooks/use-galaxy-philosophers'
+import type { GalaxyTelemetry } from '@/features/galaxy/types/galaxy'
 import { useExperienceStore } from '@/stores/experience-store'
 
 const GalaxyCanvas = lazy(() =>
@@ -36,7 +44,7 @@ function DevelopmentDiagnostics() {
 
   return (
     <details
-      className="pointer-events-auto w-full max-w-md rounded-xl border border-border/70 bg-background/60 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md"
+      className="pointer-events-auto hidden w-full max-w-md rounded-xl border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md sm:block"
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="cursor-pointer font-medium text-foreground">
@@ -53,23 +61,13 @@ function DevelopmentDiagnostics() {
   )
 }
 
-function SceneLoadFallback() {
-  return (
-    <div className="grid h-full place-items-center" role="status">
-      <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/65 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md">
-        <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        Loading historical scene…
-      </span>
-    </div>
-  )
-}
-
 export function HistoricalGalaxyExperience() {
   const search = useSearch({ from: '/' })
   const navigate = useNavigate({ from: '/' })
   const philosophersQuery = useQuery(philosophersQueryOptions())
   const philosophers = philosophersQuery.data ?? []
   const nodes = useGalaxyPhilosophers(philosophers)
+  const [telemetry, setTelemetry] = useState<GalaxyTelemetry | null>(null)
   const requestedPhilosopherId = search.philosopher?.trim() || null
   const selectedPhilosopher =
     philosophers.find(
@@ -86,6 +84,10 @@ export function HistoricalGalaxyExperience() {
     (state) => state.requestCameraReset,
   )
   const isActive = mode === 'explore'
+  const sceneReady =
+    telemetry !== null &&
+    nodes.length > 0 &&
+    telemetry.philosopherCount === nodes.length
 
   const selectPhilosopher = useCallback(
     (id: string) => {
@@ -105,92 +107,122 @@ export function HistoricalGalaxyExperience() {
     setMode('intro')
   }, [clearSelection, setMode])
 
+  const handleTelemetry = useCallback((nextTelemetry: GalaxyTelemetry) => {
+    setTelemetry(nextTelemetry)
+    if (import.meta.env.DEV || import.meta.env.VITE_E2E === 'true') {
+      window.__NOESIS_GALAXY_TELEMETRY__ = nextTelemetry
+    }
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (import.meta.env.DEV || import.meta.env.VITE_E2E === 'true') {
+        delete window.__NOESIS_GALAXY_TELEMETRY__
+      }
+    },
+    [],
+  )
+
   return (
-    <main className="relative isolate min-h-svh overflow-x-hidden bg-background text-foreground">
+    <main
+      className="relative isolate min-h-svh overflow-x-hidden bg-background text-foreground"
+      data-reduced-motion={prefersReducedMotion}
+      data-scene-ready={sceneReady}
+    >
       <div className="fixed inset-0 -z-20">
-        <Suspense fallback={<SceneLoadFallback />}>
+        <Suspense fallback={null}>
           <GalaxyCanvas
             active={isActive}
             nodes={nodes}
             selectedPhilosopherId={selectedPhilosopher?.id ?? null}
             onSelect={selectPhilosopher}
+            onTelemetry={handleTelemetry}
             reducedMotion={prefersReducedMotion}
           />
         </Suspense>
       </div>
       <div className="galaxy-atmosphere fixed inset-0 -z-10" aria-hidden="true" />
 
-      <div className="pointer-events-none mx-auto flex min-h-svh w-full max-w-[100rem] flex-col px-4 py-4 sm:px-7 sm:py-6 lg:px-10">
-        <header className="pointer-events-auto flex items-center justify-between gap-4">
+      {!sceneReady && !philosophersQuery.isError ? (
+        <SceneLoadingState
+          philosopherCount={
+            philosophersQuery.isSuccess ? philosophers.length : undefined
+          }
+        />
+      ) : null}
+
+      {sceneReady ? (
+        <p className="sr-only" role="status" data-testid="scene-ready-status">
+          Galaxy scene ready: {telemetry.philosopherCount} philosophers
+          positioned.
+        </p>
+      ) : null}
+
+      <div className="pointer-events-none relative z-20 mx-auto flex min-h-svh w-full max-w-[100rem] flex-col px-4 py-4 sm:px-7 sm:py-6 lg:px-10">
+        <header className="pointer-events-auto flex items-center justify-between gap-3">
           <a
             className="inline-flex items-center gap-2.5 rounded-md text-sm font-medium tracking-[0.04em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
             href="/"
             aria-label="Noesis Galaxy home"
           >
-            <span className="grid size-7 place-items-center rounded-full border border-accent/30 bg-surface/70 text-accent">
+            <span className="grid size-7 place-items-center rounded-full border border-accent/35 bg-surface/75 text-accent shadow-[0_0_24px_rgba(168,178,255,0.18)]">
               <Orbit className="size-3.5" aria-hidden="true" />
             </span>
             <span>Noesis Galaxy</span>
           </a>
           <div
-            className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/70 px-3 py-1.5 text-[0.65rem] font-medium tracking-[0.14em] text-muted-foreground uppercase backdrop-blur-md"
+            className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/70 px-3 py-1.5 text-[0.62rem] font-medium tracking-[0.14em] text-muted-foreground uppercase backdrop-blur-md"
             role="status"
           >
             <span
               className={`size-1.5 rounded-full ${
-                philosophersQuery.isSuccess ? 'bg-accent' : 'bg-muted-foreground'
+                philosophersQuery.isSuccess
+                  ? 'bg-accent shadow-[0_0_10px_currentColor]'
+                  : 'bg-muted-foreground'
               }`}
               aria-hidden="true"
             />
             {philosophersQuery.isPending
-              ? 'Loading data'
+              ? 'Mapping history'
               : philosophersQuery.isError
                 ? 'Data unavailable'
-                : `${philosophers.length} nodes online`}
+                : `${philosophers.length} thinkers`}
           </div>
         </header>
 
-        <div className="mt-8 flex flex-1 flex-col justify-between gap-10 pb-4 sm:mt-12">
-          <div className="flex flex-col items-start gap-5">
+        <div className="mt-5 flex flex-1 flex-col justify-between gap-8 sm:mt-8">
+          <div className="flex max-w-md flex-col items-start gap-3">
             <section
-              className="pointer-events-auto max-w-xl rounded-2xl border border-border/70 bg-background/58 p-4 backdrop-blur-lg sm:p-5"
+              className="galaxy-intro pointer-events-auto rounded-2xl border border-border/65 bg-background/64 px-4 py-3.5 backdrop-blur-xl sm:px-5 sm:py-4"
               aria-labelledby="page-title"
             >
-              <p className="text-[0.68rem] font-medium tracking-[0.2em] text-accent uppercase">
-                Phase 2 · Historical galaxy
+              <p className="text-[0.63rem] font-medium tracking-[0.2em] text-accent uppercase">
+                Phase 2.5 · Historical galaxy
               </p>
               <h1
                 id="page-title"
-                className="mt-2 text-3xl font-medium tracking-[-0.045em] sm:text-4xl"
+                className="mt-1.5 text-2xl font-medium tracking-[-0.04em] sm:text-3xl"
               >
                 Philosophy across time
               </h1>
-              <p className="mt-3 max-w-lg text-sm leading-6 text-foreground/80 sm:text-base sm:leading-7">
-                Move left to right from antiquity toward the present. Vertical
-                and depth clustering reflects shared school metadata—not direct
-                influence.
+              <p className="mt-2 max-w-md text-xs leading-5 text-foreground/78 sm:text-sm sm:leading-6">
+                Horizontal position follows birth year. Nearby clusters share
+                school metadata—not direct influence.
               </p>
             </section>
-            <div className="pointer-events-auto max-w-xl">
+            <div className="pointer-events-auto w-full">
               <EraLegend />
             </div>
 
-            {philosophersQuery.isPending ? (
-              <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-2 text-sm text-muted-foreground backdrop-blur-md" role="status">
-                <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                Validating philosopher coordinates…
-              </div>
-            ) : null}
-
             {philosophersQuery.isError ? (
-              <div className="pointer-events-auto max-w-md rounded-xl border border-destructive/35 bg-background/80 p-4 backdrop-blur-md" role="alert">
+              <div className="pointer-events-auto max-w-md rounded-xl border border-destructive/35 bg-background/88 p-4 backdrop-blur-md" role="alert">
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="mt-0.5 size-4 text-destructive" aria-hidden="true" />
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
                   <div>
                     <p className="text-sm font-medium">Historical data unavailable</p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      The scene shell remains available, but philosopher nodes
-                      could not be validated.
+                      The archive could not be validated. The interface remains
+                      available and the request can be retried.
                     </p>
                   </div>
                 </div>
@@ -208,7 +240,7 @@ export function HistoricalGalaxyExperience() {
           </div>
 
           <div className="grid items-end gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-            <div className="flex flex-col items-start gap-3">
+            <div className="flex flex-col items-start gap-2.5">
               <div className="pointer-events-auto flex flex-wrap gap-2">
                 <SceneControls
                   active={isActive}
@@ -225,15 +257,14 @@ export function HistoricalGalaxyExperience() {
                   disabled={!philosophersQuery.isSuccess || philosophers.length === 0}
                 />
               </div>
-              <p className="pointer-events-auto max-w-2xl text-[0.7rem] leading-5 text-muted-foreground">
-                Drag to orbit, scroll or pinch to zoom, and select a node to
-                focus. Era boundaries are broad orientation aids, not claims of
-                academic consensus.
+              <p className="pointer-events-auto hidden max-w-2xl text-[0.68rem] leading-5 text-muted-foreground sm:block">
+                Drag to orbit, scroll or pinch to zoom, hover or tap a luminous
+                thinker, and reset to return to the complete historical span.
               </p>
               <DevelopmentDiagnostics />
             </div>
 
-            <div className="justify-self-end">
+            <div className="galaxy-summary-slot justify-self-end">
               <PhilosopherSummaryPanel
                 philosopher={selectedPhilosopher}
                 invalidSelectionId={invalidSelectionId}
