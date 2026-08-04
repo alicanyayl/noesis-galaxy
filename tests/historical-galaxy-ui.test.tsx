@@ -10,6 +10,10 @@ import { useExperienceStore } from '@/stores/experience-store'
 import {
   rawPhilosopherDetailFixture,
   rawPhilosopherFixture,
+  rawAgreeingKeyIdeaFixture,
+  rawDisagreeingKeyIdeaFixture,
+  rawOwnedKeyIdeaDetailFixture,
+  rawOwnedKeyIdeaFixture,
 } from './fixtures/philosophers-api'
 
 vi.mock('@/features/galaxy/components/galaxy-canvas', () => ({
@@ -22,9 +26,18 @@ function mockPhilosophersApi() {
   vi.stubGlobal(
     'fetch',
     vi.fn().mockImplementation((input: string) => {
-      const payload = input.endsWith('/api/philosophers')
+      const pathname = new URL(input).pathname
+      const payload = pathname.endsWith('/api/philosophers')
         ? [rawPhilosopherFixture]
-        : rawPhilosopherDetailFixture
+        : pathname.endsWith('/api/keyideas')
+          ? [
+              rawOwnedKeyIdeaFixture,
+              rawAgreeingKeyIdeaFixture,
+              rawDisagreeingKeyIdeaFixture,
+            ]
+          : pathname.includes('/api/keyideas/')
+            ? rawOwnedKeyIdeaDetailFixture
+            : rawPhilosopherDetailFixture
 
       return Promise.resolve(
         new Response(JSON.stringify(payload), {
@@ -52,6 +65,7 @@ describe('historical galaxy URL and accessible exploration', () => {
       hoveredPhilosopherId: null,
       labelsVisible: true,
       eraGuidesVisible: true,
+      connectionsVisible: true,
       cameraResetRequest: 0,
     })
     mockPhilosophersApi()
@@ -68,6 +82,19 @@ describe('historical galaxy URL and accessible exploration', () => {
       await screen.findByRole('heading', { name: 'Adam Smith' }),
     ).toBeVisible()
     expect(screen.getByText('1723 – 1790')).toBeVisible()
+  })
+
+  it('restores a selected key idea from the URL', async () => {
+    renderRoute(
+      `/?philosopher=${rawPhilosopherFixture.id}&idea=${rawOwnedKeyIdeaFixture.id}`,
+    )
+
+    expect(await screen.findByTestId('selected-idea-detail')).toBeVisible()
+    expect(screen.getByTestId('selected-idea-detail')).toHaveTextContent(
+      'Mind and matter are distinct kinds of substance.',
+    )
+    expect(screen.getByText('1 continuous agreements')).toBeVisible()
+    expect(screen.getByText('1 interrupted disagreements')).toBeVisible()
   })
 
   it('handles an invalid philosopher URL selection safely', async () => {
@@ -131,6 +158,23 @@ describe('historical galaxy URL and accessible exploration', () => {
       ).not.toBeInTheDocument()
       expect(router.state.location.search).toEqual({})
     })
+  })
+
+  it('returns from idea focus to philosopher focus before clearing the galaxy', async () => {
+    const user = userEvent.setup()
+    const router = renderRoute(
+      `/?philosopher=${rawPhilosopherFixture.id}&idea=${rawOwnedKeyIdeaFixture.id}`,
+    )
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Back to philosopher' }),
+    )
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({
+        philosopher: rawPhilosopherFixture.id,
+      })
+    })
+    expect(screen.queryByTestId('selected-idea-detail')).not.toBeInTheDocument()
   })
 
   it('keeps the accessible list usable when the WebGL view falls back', async () => {

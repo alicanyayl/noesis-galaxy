@@ -34,6 +34,7 @@ describe('Noesis Galaxy application shell', () => {
       hoveredPhilosopherId: null,
       labelsVisible: true,
       eraGuidesVisible: true,
+      connectionsVisible: true,
       cameraResetRequest: 0,
     })
     vi.stubGlobal(
@@ -55,11 +56,11 @@ describe('Noesis Galaxy application shell', () => {
     renderRoute()
 
     expect(
-      await screen.findByRole('heading', { name: 'Philosophy across time' }),
+      await screen.findByRole('heading', { name: 'Follow the arc of thought' }),
     ).toBeVisible()
     expect(
       screen.getByText(
-        /Horizontal position follows birth year/,
+        /History spirals from the ancient core/,
       ),
     ).toBeVisible()
   })

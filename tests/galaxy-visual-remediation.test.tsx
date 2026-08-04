@@ -9,12 +9,19 @@ import { EraLegend } from '@/features/galaxy/components/era-legend'
 import { SceneLoadingState } from '@/features/galaxy/components/scene-loading-state'
 import { calculateGalaxyBounds } from '@/features/galaxy/layout/galaxy-bounds'
 import { calculateOverviewCamera } from '@/features/galaxy/layout/overview-camera'
+import { SceneFallback } from '@/features/galaxy/components/galaxy-canvas'
 import { getSceneQuality } from '@/features/galaxy/scene/scene-quality'
 import { NODE_VISUAL_CONFIG } from '@/features/galaxy/scene/scene-visuals'
 
-vi.mock('@/features/galaxy/components/galaxy-canvas', () => ({
-  GalaxyCanvas: () => <div data-testid="galaxy-canvas" />,
-}))
+vi.mock('@/features/galaxy/components/galaxy-canvas', async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import('@/features/galaxy/components/galaxy-canvas')
+  >()
+  return {
+    ...actual,
+    GalaxyCanvas: () => <div data-testid="galaxy-canvas" />,
+  }
+})
 
 describe('galaxy visual remediation geometry', () => {
   const bounds = calculateGalaxyBounds([
@@ -115,6 +122,13 @@ describe('galaxy visual remediation interface', () => {
       screen.getByText('Positioning 114 thinkers across history'),
     ).toBeVisible()
     expect(screen.queryByText(/%/)).not.toBeInTheDocument()
+  })
+
+  it('provides an explicit WebGL fallback path to the accessible explorer', () => {
+    render(<SceneFallback />)
+
+    expect(screen.getByText('The historical scene is unavailable.')).toBeVisible()
+    expect(screen.getByText(/Explore accessible list/)).toBeVisible()
   })
 
   it('renders a clear collection error and retry control', async () => {

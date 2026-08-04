@@ -1,6 +1,7 @@
 import type {
   RawCategory,
   RawKeyIdea,
+  RawKeyIdeaDetail,
   RawPhilosopherSummary,
   RawPhilosopherDetail,
   RawQuote,
@@ -47,6 +48,37 @@ export const rawKeyIdeaFixture = {
   text: 'Everything is composed of water just in different forms.',
 } satisfies RawKeyIdea
 
+export const rawOwnedKeyIdeaFixture = {
+  ...rawKeyIdeaFixture,
+  id: '3B8B4D53-2886-45A4-877C-AE452A6A6F2A',
+  internalID: '9',
+  philosopher: { id: rawPhilosopherFixture.id },
+  order: '9',
+  text: 'Mind and matter are distinct kinds of substance.',
+} satisfies RawKeyIdea
+
+export const rawAgreeingKeyIdeaFixture = {
+  ...rawKeyIdeaFixture,
+  id: '3F2CF5D7-046E-4CCE-A296-3C9C15F2A6FA',
+  internalID: '101',
+  philosopher: { id: '4B7B8E3A-A01C-41B5-89B7-F6464C64A104' },
+  text: 'Visible reality rests on a deeper intelligible order.',
+} satisfies RawKeyIdea
+
+export const rawDisagreeingKeyIdeaFixture = {
+  ...rawKeyIdeaFixture,
+  id: '4ED392A0-B357-44D2-91D5-4414E5A15A5E',
+  internalID: '102',
+  philosopher: { id: '93D94133-3DC0-42B9-A212-4348EC053CF3' },
+  text: 'Mind and matter are expressions of one substance.',
+} satisfies RawKeyIdea
+
+export const rawOwnedKeyIdeaDetailFixture = {
+  ...rawOwnedKeyIdeaFixture,
+  agreeingKeyIdeas: [rawAgreeingKeyIdeaFixture],
+  disagreeingKeyIdeas: [rawDisagreeingKeyIdeaFixture],
+} satisfies RawKeyIdeaDetail
+
 export const rawCategoryFixture = {
   id: '7CF726D6-547D-4204-8656-D9F12A5F2B76',
   abbreviation: 'ae',
@@ -81,6 +113,6 @@ export const rawPhilosopherDetailFixture = {
   },
   works: [],
   quotes: [],
-  keyIdeas: [],
+  keyIdeas: [rawOwnedKeyIdeaFixture],
   arObjects: [],
 } satisfies RawPhilosopherDetail
