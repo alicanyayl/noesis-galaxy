@@ -80,7 +80,7 @@ populated school labels. Layout is pure and memoized; no React state updates run
 inside a frame loop.
 
 The Three.js scene is lazy-loaded. The initial production script is currently
-498.82 kB (154.07 kB gzip), down from the Phase 1 baseline of 1,316.59 kB
+498.86 kB (154.09 kB gzip), down from the Phase 1 baseline of 1,316.59 kB
 (368.48 kB gzip). The on-demand galaxy chunk is 942.68 kB (249.96 kB gzip), so
 Vite's >500 kB advisory remains for that lazy chunk.
 

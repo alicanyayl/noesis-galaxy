@@ -119,8 +119,8 @@ limited meaning of school clustering.
 
 Before Phase 2, the production build emitted one 1,316.59 kB main script
 (368.48 kB gzip). Phase 2 dynamically imports the entire Three.js Canvas. The
-current production build emits a 498.82 kB entry script (154.07 kB gzip) and a
-942.68 kB on-demand galaxy chunk (249.96 kB gzip). CSS is 46.18 kB (8.44 kB
+current production build emits a 498.86 kB entry script (154.09 kB gzip) and a
+942.68 kB on-demand galaxy chunk (249.96 kB gzip). CSS is 46.18 kB (8.45 kB
 gzip). Development diagnostics are conditionally imported only in development
 and do not appear in the production chunk list.
 
