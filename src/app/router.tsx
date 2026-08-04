@@ -4,6 +4,7 @@ import {
   createRouter,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { z } from 'zod'
 
 import { RootLayout } from '@/components/layout/root-layout'
 import { NotFoundPage } from '@/routes/not-found-page'
@@ -14,9 +15,14 @@ const rootRoute = createRootRoute({
   notFoundComponent: NotFoundPage,
 })
 
+const rootSearchSchema = z.object({
+  philosopher: z.string().optional(),
+})
+
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  validateSearch: rootSearchSchema,
   component: RootPage,
 })
 

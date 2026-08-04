@@ -5,38 +5,98 @@ contradictions.
 
 ## Status
 
-**Phase 1 — Philosophers API Data Foundation** is implemented. The application
-retains its Phase 0 full-screen React Three Fiber shell and now includes a small
-development-facing diagnostics panel backed by validated live data.
+**Phase 2 — Historical Galaxy** is implemented. The official Philosophers API
+now drives a deterministic, interactive Three.js scene containing every
+validated philosopher record.
 
-Phase 1 adds transport schemas, normalized application models, historical year
-and image URL normalization, bounded coordinates, a typed fetch client, and
-reusable TanStack Query options. It does not render API data in the galaxy.
+Birth year determines horizontal historical position. Normalized school
+metadata determines loose vertical/depth clusters, while stable ID hashing
+prevents nodes in a cluster from stacking. These spatial clusters do not imply
+direct influence, agreement, lineage, or importance.
 
-## Long-term concept
+## Current experience
 
-Noesis Galaxy is intended to become a navigable philosophical universe:
-philosophers as celestial nodes, schools as constellations, ideas as orbiting
-objects, and agreements or contradictions as visible relationships. Historical
-storytelling and branching questions will eventually shape a visitor's route
-through that universe.
+- Move left to right from antiquity toward the present.
+- Hover a node to reveal its philosopher name.
+- Select a node to update the URL, focus the camera, and open a concise summary.
+- Drag to orbit and scroll or pinch to zoom within bounded controls.
+- Reset the camera and selection from the control row.
+- Toggle era guides and populated school labels.
+- Open the keyboard-accessible philosopher list to browse by broad era without
+  relying on WebGL.
+
+Selection is shareable as `/?philosopher=<id>`. Valid IDs restore selection;
+invalid IDs display a safe clear action. Browser back and forward navigation
+follow TanStack Router state. Camera coordinates are never persisted.
+
+## Historical model
+
+The historical x-axis uses a monotonic asinh transform with a soft outer bound.
+This preserves BCE-to-CE ordering while compressing dense and extreme ranges.
+Unknown birth years occupy an explicitly labeled uncertainty region. Broad era
+labels—Ancient, Medieval, Early modern, Modern, Contemporary, and Unknown—are
+orientation aids rather than claims of universal academic consensus.
+
+Philosopher nodes persist after death. The selected summary displays normalized
+birth and death metadata, but Phase 2 does not calculate an idea lifespan or
+infer later intellectual influence.
+
+See [the Phase 2 technical notes](docs/phase-2-historical-galaxy.md) for the
+mapping formula, era boundaries, hashing strategy, state ownership, and
+performance measurements. Earlier decisions remain in the
+[Phase 0 audit](docs/phase-0-audit.md) and
+[Phase 1 data notes](docs/phase-1-data-foundation.md).
+
+## Data integration
+
+The public REST base is `https://philosophersapi.com/api`. It requires no API
+key and permits direct browser requests. Zod validates transport responses and
+normalized application models. TanStack Query owns collection and detail data;
+fetched data is not copied into Zustand.
+
+The philosopher collection loads once through the existing query options and is
+passed into the Canvas. Selected details load only for the active philosopher,
+providing birthplace and key-idea counts without eagerly issuing 114 detail
+requests. Only the selected 250px portrait or illustration is rendered in the
+DOM; philosopher images are not loaded as WebGL textures.
+
+## Accessibility and reduced motion
+
+The accessible explorer is a focus-managed Base UI dialog with semantic era
+headings, lists, keyboard-selectable philosopher buttons, normalized lifespans,
+and school text. It remains available when WebGL is unsupported or the scene
+error boundary activates.
+
+Text explains the historical axis and cluster meaning, selected changes are
+announced, and controls expose pressed/disabled state. With reduced motion,
+camera focus becomes immediate, background stars stop, and no repeated node
+pulsing occurs.
+
+## Performance
+
+All philosopher nodes use one instanced mesh with shared geometry and material.
+Only hovered or selected labels are added dynamically, plus at most five
+populated school labels. Layout is pure and memoized; no React state updates run
+inside a frame loop.
+
+The Three.js scene is lazy-loaded. The initial production script is currently
+498.82 kB (154.07 kB gzip), down from the Phase 1 baseline of 1,316.59 kB
+(368.48 kB gzip). The on-demand galaxy chunk is 942.68 kB (249.96 kB gzip), so
+Vite's >500 kB advisory remains for that lazy chunk.
 
 ## Technology
 
-- React 19 and TypeScript 6
-- Vite 8 and Tailwind CSS 4
-- shadcn/ui with the Base UI foundation
-- Three.js, React Three Fiber, and Drei
+- React 19, strict TypeScript 6, and Vite 8
+- Tailwind CSS 4 and shadcn/ui with Base UI
+- Three.js, React Three Fiber, and Drei CameraControls
 - TanStack Router and TanStack Query
 - Zod, Zustand, Motion, and Lucide React
-- ESLint 10
-- Vitest and React Testing Library
-- pnpm 10
+- Vitest, React Testing Library, ESLint 10, and pnpm 10
 
 ## Requirements
 
 - Node.js 22.12 or newer; Node.js 24 is used in CI
-- pnpm 10.30.0 (recorded in `packageManager`)
+- pnpm 10.30.0
 
 ## Installation
 
@@ -55,83 +115,54 @@ pnpm dev
 | `pnpm build` | Type-check application code and create a production build |
 | `pnpm preview` | Preview the production build locally |
 | `pnpm lint` | Run ESLint with zero warnings allowed |
-| `pnpm typecheck` | Type-check application, scripts, and test code |
+| `pnpm typecheck` | Type-check application, scripts, and tests |
 | `pnpm test` | Run Vitest in watch mode |
 | `pnpm test:run` | Run the offline unit suite once |
 | `pnpm api:smoke` | Fetch and validate the live philosopher collection |
-| `pnpm check` | Run lint, type-checking, tests, and the production build |
+| `pnpm check` | Run lint, typechecking, tests, and production build |
 
-## Philosophers API foundation
-
-The official REST base URL is `https://philosophersapi.com/api`. The public API
-does not require a key and permits direct browser requests with
-`Access-Control-Allow-Origin: *`, so the app uses REST directly without a
-proxy. The official GraphQL endpoint is available, but Phase 1 uses REST for a
-smaller and clearer data boundary.
-
-Validated entities include philosopher summaries and details, key-idea
-summaries and details, categories, quotes, works, image references, birth
-locations, and explicit relationship IDs. Responses are validated as raw API
-models and then normalized and validated again for application use.
-
-BC/BCE years become negative numbers and AD/CE years become positive numbers;
-the original string and era are retained. `Present`, unknown, blank, and invalid
-values never receive an invented numeric year. Relative image paths resolve
-through one safe official-origin resolver, while unsafe protocols are rejected.
-Latitude and longitude accept finite numbers or numeric strings and must remain
-within geographic bounds.
-
-A philosopher's birth and death years are intentionally separate from key-idea
-ownership, categories, agreement IDs, and disagreement IDs. Phase 1 does not
-assume that an idea ends when its philosopher dies.
-
-See [the Phase 0 audit](docs/phase-0-audit.md) and
-[the Phase 1 data notes](docs/phase-1-data-foundation.md) for verified endpoint
-behavior, schema boundaries, query keys, errors, and known inconsistencies.
-
-## Current structure
+## Structure
 
 ```text
 src/
-├── api/philosophers/       # REST client, Zod schemas, normalizers, queries
-├── app/                    # Providers and type-safe router
-├── components/             # Application layout and shadcn/Base UI
+├── api/philosophers/       # REST client, raw schemas, normalizers, queries
+├── app/                    # Providers, query client, and type-safe router
+├── components/             # Application boundaries and shadcn/Base UI
 ├── features/
-│   ├── data-diagnostics/   # Minimal Phase 1 connection summary
-│   └── galaxy/             # Phase 0 Canvas and verification scene
-├── lib/                    # Shared utilities
-├── routes/                 # Root and not-found route UI
-└── stores/                 # Small client-only experience state
+│   ├── data-diagnostics/   # Collapsible development-only Phase 1 diagnostics
+│   └── galaxy/
+│       ├── components/     # Overlay, controls, summary, accessible list
+│       ├── hooks/          # Memoized normalized-data projection
+│       ├── layout/         # Pure history, era, school, hash, lifespan logic
+│       ├── scene/          # Instanced nodes, guides, environment, camera
+│       └── types/          # Scene-facing data types
+├── routes/                 # Root and not-found UI
+└── stores/                 # Transient client experience state only
 scripts/                    # Opt-in live API smoke validation
-tests/                      # Network-independent unit and UI tests
-docs/                       # Audit, architecture, and scope notes
+tests/                      # Network-independent layout, URL, UI, and API tests
+docs/                       # Audit and architecture notes
 ```
-
-Fetched API data remains TanStack Query server state and is not copied into
-Zustand. The diagnostics panel intentionally requests only philosopher and
-category collections. Detail requests are exposed as reusable query options and
-are not triggered on initial load.
 
 ## Roadmap
 
 - [x] Phase 0: Foundation
 - [x] Phase 1: Philosophers API data foundation
-- [ ] Phase 2: Historical galaxy
-- [ ] Phase 3: Scroll-driven narrative
+- [x] Phase 2: Historical galaxy
+- [ ] Phase 3: Scroll-driven historical narrative
 - [ ] Phase 4: Philosopher encounters
 - [ ] Phase 5: Branching journeys
 - [ ] Phase 6: Agreement and contradiction
 - [ ] Phase 7: Visual polish and accessibility
 - [ ] Phase 8: Testing and release
 
-## Phase 1 limitations
+## Current limitations
 
-Historical galaxy positioning, timeline rendering, scroll-driven storytelling,
-branching questions, philosopher encounter scenes, idea-clash views,
-agreement/disagreement rendering, complex shaders, postprocessing, imported 3D
-models, audio, React Bits effects, authentication, databases, and backend
-services remain unimplemented. The central object and stars are still only the
-procedural Phase 0 WebGL verification scene.
+Phase 2 deliberately excludes scroll-driven storytelling, journey paths,
+branching questions, philosopher encounter scenes, influence inference,
+key-idea or quote constellations, agreement/disagreement rendering, Idea Clash,
+geographic maps, complex or nebula shaders, postprocessing, bloom, imported 3D
+models, Rubik interactions, audio, React Bits, Playwright, authentication,
+databases, backend services, persistence, and deployment.
 
 ## License
 

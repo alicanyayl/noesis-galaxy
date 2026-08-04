@@ -1,10 +1,15 @@
 import { Canvas } from '@react-three/fiber'
 import { Component, useState, type ReactNode } from 'react'
 
-import { GalaxyScene } from '@/features/galaxy/scene/galaxy-scene'
+import { HistoricalGalaxyScene } from '@/features/galaxy/scene/historical-galaxy-scene'
+import type { GalaxyPhilosopherNode } from '@/features/galaxy/types/galaxy'
+import { useExperienceStore } from '@/stores/experience-store'
 
-interface GalaxyCanvasProps {
-  isActive: boolean
+export interface GalaxyCanvasProps {
+  active: boolean
+  nodes: GalaxyPhilosopherNode[]
+  selectedPhilosopherId: string | null
+  onSelect: (id: string) => void
   reducedMotion: boolean
 }
 
@@ -24,15 +29,11 @@ class SceneBoundary extends Component<SceneBoundaryProps, SceneBoundaryState> {
   }
 
   componentDidCatch() {
-    // The visible fallback below is intentionally free of implementation details.
+    // The DOM explorer remains available outside this isolated scene boundary.
   }
 
   render() {
-    if (this.state.hasError) {
-      return <SceneFallback />
-    }
-
-    return this.props.children
+    return this.state.hasError ? <SceneFallback /> : this.props.children
   }
 }
 
@@ -45,20 +46,20 @@ function supportsWebGL() {
   }
 }
 
-function SceneFallback() {
+export function SceneFallback() {
   return (
     <div
       className="grid h-full place-items-center px-6 text-center"
       role="status"
       aria-live="polite"
     >
-      <div className="max-w-sm">
+      <div className="max-w-sm rounded-2xl border border-border/70 bg-background/75 p-5 backdrop-blur-md">
         <p className="text-sm font-medium text-foreground">
-          The visual preview is unavailable.
+          The historical scene is unavailable.
         </p>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Noesis Galaxy still works as a readable experience, but this device
-          could not start the WebGL scene.
+          Use the “Explore accessible list” control to browse and select every
+          philosopher without WebGL.
         </p>
       </div>
     </div>
@@ -66,10 +67,20 @@ function SceneFallback() {
 }
 
 export function GalaxyCanvas({
-  isActive,
+  active,
+  nodes,
+  selectedPhilosopherId,
+  onSelect,
   reducedMotion,
 }: GalaxyCanvasProps) {
   const [isWebGLAvailable] = useState(supportsWebGL)
+  const eraGuidesVisible = useExperienceStore(
+    (state) => state.eraGuidesVisible,
+  )
+  const labelsVisible = useExperienceStore((state) => state.labelsVisible)
+  const cameraResetRequest = useExperienceStore(
+    (state) => state.cameraResetRequest,
+  )
 
   if (!isWebGLAvailable) {
     return <SceneFallback />
@@ -78,12 +89,12 @@ export function GalaxyCanvas({
   return (
     <SceneBoundary>
       <Canvas
-        aria-label="A quiet field of stars surrounding a celestial placeholder"
+        aria-label="An interactive galaxy positioning philosophers from ancient to contemporary history"
         className={
-          isActive ? 'galaxy-canvas galaxy-canvas--active' : 'galaxy-canvas'
+          active ? 'galaxy-canvas galaxy-canvas--active' : 'galaxy-canvas'
         }
         role="img"
-        camera={{ fov: 44, near: 0.1, far: 100, position: [0, 0, 6] }}
+        camera={{ fov: 44, near: 0.1, far: 120, position: [0, 0, 32] }}
         dpr={[1, 1.5]}
         fallback={<SceneFallback />}
         gl={{
@@ -92,7 +103,16 @@ export function GalaxyCanvas({
           powerPreference: 'high-performance',
         }}
       >
-        <GalaxyScene isActive={isActive} reducedMotion={reducedMotion} />
+        <HistoricalGalaxyScene
+          active={active}
+          nodes={nodes}
+          selectedPhilosopherId={selectedPhilosopherId}
+          onSelect={onSelect}
+          reducedMotion={reducedMotion}
+          eraGuidesVisible={eraGuidesVisible}
+          labelsVisible={labelsVisible}
+          cameraResetRequest={cameraResetRequest}
+        />
       </Canvas>
     </SceneBoundary>
   )

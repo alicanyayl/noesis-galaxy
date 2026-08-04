@@ -68,6 +68,11 @@ limited to fields that were documented or absent in live responses. The API
 client validates raw JSON before normalization; each normalizer then validates
 its application model again.
 
+Phase 2 refined philosopher collection handling so an isolated malformed record
+is excluded without preventing valid records from loading. A non-empty response
+with no valid philosopher records still fails validation instead of silently
+becoming an empty collection.
+
 Normalized philosopher models provide structured birth and death years,
 trimmed interest arrays, nullable optional text and links, absolute image
 references, and detail-only coordinates and related entity IDs. Key ideas keep

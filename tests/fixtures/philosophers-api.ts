@@ -2,6 +2,7 @@ import type {
   RawCategory,
   RawKeyIdea,
   RawPhilosopherSummary,
+  RawPhilosopherDetail,
   RawQuote,
 } from '@/api/philosophers'
 
@@ -68,3 +69,18 @@ export const rawQuoteFixture = {
   work: '',
   year: '',
 } satisfies RawQuote
+
+export const rawPhilosopherDetailFixture = {
+  ...rawPhilosopherFixture,
+  birthLocation: {
+    id: '13692860-080E-420C-8946-135E961E8B3B',
+    philosopher: { id: rawPhilosopherFixture.id },
+    name: 'Kirkcaldy, Scotland',
+    latitude: 56.11073,
+    longitude: -3.16737,
+  },
+  works: [],
+  quotes: [],
+  keyIdeas: [],
+  arObjects: [],
+} satisfies RawPhilosopherDetail

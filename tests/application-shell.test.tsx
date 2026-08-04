@@ -1,11 +1,13 @@
 import { createMemoryHistory } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '@/App'
+import { createAppQueryClient } from '@/app/query-client'
 import { createAppRouter } from '@/app/router'
 import { useExperienceStore } from '@/stores/experience-store'
+import { rawPhilosopherFixture } from './fixtures/philosophers-api'
 
 vi.mock('@/features/galaxy/components/galaxy-canvas', () => ({
   GalaxyCanvas: () => <div data-testid="galaxy-canvas" />,
@@ -17,23 +19,47 @@ vi.mock('@/features/data-diagnostics/components/data-diagnostics', () => ({
 
 function renderRoute(path = '/') {
   const history = createMemoryHistory({ initialEntries: [path] })
-  return render(<App appRouter={createAppRouter(history)} />)
+  return render(
+    <App
+      appRouter={createAppRouter(history)}
+      queryClient={createAppQueryClient()}
+    />,
+  )
 }
 
 describe('Noesis Galaxy application shell', () => {
   beforeEach(() => {
-    useExperienceStore.setState({ mode: 'intro' })
+    useExperienceStore.setState({
+      mode: 'intro',
+      hoveredPhilosopherId: null,
+      labelsVisible: true,
+      eraGuidesVisible: true,
+      cameraResetRequest: 0,
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify([rawPhilosopherFixture]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('renders the project heading and tagline', async () => {
     renderRoute()
 
     expect(
-      await screen.findByRole('heading', { name: 'Noesis Galaxy' }),
+      await screen.findByRole('heading', { name: 'Philosophy across time' }),
     ).toBeVisible()
     expect(
       screen.getByText(
-        'Explore philosophy across time, ideas, and contradictions.',
+        /Move left to right from antiquity toward the present/,
       ),
     ).toBeVisible()
   })
@@ -42,7 +68,7 @@ describe('Noesis Galaxy application shell', () => {
     renderRoute()
 
     expect(
-      await screen.findByRole('button', { name: 'Enter the preview' }),
+      await screen.findByRole('button', { name: 'Enter galaxy' }),
     ).toBeEnabled()
   })
 
@@ -51,17 +77,13 @@ describe('Noesis Galaxy application shell', () => {
     renderRoute()
 
     await user.click(
-      await screen.findByRole('button', { name: 'Enter the preview' }),
+      await screen.findByRole('button', { name: 'Enter galaxy' }),
     )
 
     expect(
-      screen.getByRole('button', { name: 'Return to intro' }),
+      screen.getByRole('button', { name: 'Quiet view' }),
     ).toBeVisible()
-    expect(
-      screen.getByText(
-        'A small field of stars is online. The journey itself comes next.',
-      ),
-    ).toBeVisible()
+    expect(useExperienceStore.getState().mode).toBe('explore')
   })
 
   it('renders a not-found page for an unknown route', async () => {

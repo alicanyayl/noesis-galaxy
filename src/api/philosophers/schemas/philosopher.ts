@@ -40,9 +40,23 @@ export const rawPhilosopherSummarySchema = z.object({
   libriVoxGetRequestLinks: z.array(z.url()),
 })
 
-export const rawPhilosopherCollectionSchema = z.array(
-  rawPhilosopherSummarySchema,
-)
+export const rawPhilosopherCollectionSchema = z
+  .array(z.unknown())
+  .transform((items, context) => {
+    const philosophers = items.flatMap((item) => {
+      const result = rawPhilosopherSummarySchema.safeParse(item)
+      return result.success ? [result.data] : []
+    })
+
+    if (items.length > 0 && philosophers.length === 0) {
+      context.addIssue({
+        code: 'custom',
+        message: 'No philosopher records matched the validated schema.',
+      })
+    }
+
+    return philosophers
+  })
 
 export const rawPhilosopherDetailSchema = rawPhilosopherSummarySchema.extend({
   birthLocation: rawLocationSchema.nullish(),
