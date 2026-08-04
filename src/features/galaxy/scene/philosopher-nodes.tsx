@@ -1,6 +1,6 @@
 import { Html, useCursor } from '@react-three/drei'
 import type { ThreeEvent } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   AdditiveBlending,
   Object3D,
@@ -8,6 +8,11 @@ import {
 } from 'three'
 
 import { formatPhilosopherLifespan } from '@/features/galaxy/layout/lifespan'
+import {
+  philosopherInitials,
+  philosopherPortraitUrl,
+  philosopherThumbnailUrl,
+} from '@/features/galaxy/layout/portrait'
 import type { SceneQuality } from '@/features/galaxy/scene/scene-quality'
 import {
   NODE_VISUAL_CONFIG,
@@ -28,6 +33,37 @@ function nodeFromEvent(
   event: { instanceId?: number },
 ) {
   return event.instanceId === undefined ? null : nodes[event.instanceId] ?? null
+}
+
+function ScenePortrait({
+  node,
+  selected,
+}: {
+  node: GalaxyPhilosopherNode
+  selected: boolean
+}) {
+  const imageUrl = selected
+    ? philosopherPortraitUrl(node.philosopher)
+    : philosopherThumbnailUrl(node.philosopher)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+
+  return (
+    <div
+      className={`galaxy-scene-portrait${selected ? ' galaxy-scene-portrait--selected' : ''}`}
+      data-portrait-state={imageUrl && failedUrl !== imageUrl ? 'image' : 'fallback'}
+    >
+      {imageUrl && failedUrl !== imageUrl ? (
+        <img
+          alt=""
+          loading="lazy"
+          src={imageUrl}
+          onError={() => setFailedUrl(imageUrl)}
+        />
+      ) : (
+        <span>{philosopherInitials(node.philosopher)}</span>
+      )}
+    </div>
+  )
 }
 
 export function PhilosopherNodes({
@@ -85,6 +121,7 @@ export function PhilosopherNodes({
       const haloScale =
         quality.nodeScaleMultiplier *
         quality.haloScaleMultiplier *
+        emphasis *
         (isSelected ? 1.32 : isHovered ? 1.16 : 1)
 
       temporaryObject.position.set(
@@ -171,7 +208,7 @@ export function PhilosopherNodes({
               hoveredNode.position.z,
             ]}
           >
-            <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <mesh>
               <torusGeometry args={[0.31 * quality.nodeScaleMultiplier, 0.018, 8, 36]} />
               <meshBasicMaterial
                 color={SCENE_COLORS.hovered}
@@ -190,15 +227,20 @@ export function PhilosopherNodes({
             ]}
             style={{ pointerEvents: 'none' }}
           >
-            <span className="galaxy-hover-label">
-              <strong>{hoveredNode.philosopher.name}</strong>
-              <span>
-                {formatPhilosopherLifespan(
-                  hoveredNode.philosopher.birthYear,
-                  hoveredNode.philosopher.deathYear,
-                )}
+            <div className="galaxy-hover-card">
+              <ScenePortrait node={hoveredNode} selected={false} />
+              <span className="galaxy-hover-label">
+                <strong>{hoveredNode.philosopher.name}</strong>
+                <span>
+                  {formatPhilosopherLifespan(
+                    hoveredNode.philosopher.birthYear,
+                    hoveredNode.philosopher.deathYear,
+                  )}
+                  {' · '}
+                  {hoveredNode.schoolLabel}
+                </span>
               </span>
-            </span>
+            </div>
           </Html>
         </>
       ) : null}
@@ -211,7 +253,7 @@ export function PhilosopherNodes({
             selectedNode.position.z,
           ]}
         >
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <mesh>
             <torusGeometry
               args={[0.38 * quality.nodeScaleMultiplier, 0.026, 10, 56]}
             />
@@ -222,7 +264,7 @@ export function PhilosopherNodes({
               transparent
             />
           </mesh>
-          <mesh rotation={[Math.PI / 2, Math.PI / 3, 0]}>
+          <mesh rotation={[0.42, 0.18, Math.PI / 3]}>
             <torusGeometry
               args={[0.54 * quality.nodeScaleMultiplier, 0.012, 8, 56]}
             />
@@ -244,6 +286,22 @@ export function PhilosopherNodes({
               transparent
             />
           </mesh>
+          <Html center position={[0, 0.78, 0]}>
+            <div className="galaxy-selected-identity">
+              <ScenePortrait node={selectedNode} selected />
+              <span>
+                <strong>{selectedNode.philosopher.name}</strong>
+                <small>
+                  {formatPhilosopherLifespan(
+                    selectedNode.philosopher.birthYear,
+                    selectedNode.philosopher.deathYear,
+                  )}
+                  {' · '}
+                  {selectedNode.schoolLabel}
+                </small>
+              </span>
+            </div>
+          </Html>
         </group>
       ) : null}
     </>

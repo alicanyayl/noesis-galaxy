@@ -7,8 +7,9 @@ import {
   type OverviewCamera,
 } from '@/features/galaxy/layout/overview-camera'
 import { CameraRig } from '@/features/galaxy/scene/camera-rig'
-import { EraGuides } from '@/features/galaxy/scene/era-guides'
 import { GalaxyEnvironment } from '@/features/galaxy/scene/galaxy-environment'
+import { HistoricalStreams } from '@/features/galaxy/scene/historical-streams'
+import { IdeaSystemScene } from '@/features/galaxy/scene/idea-system'
 import { PhilosopherNodes } from '@/features/galaxy/scene/philosopher-nodes'
 import {
   getSceneQuality,
@@ -17,6 +18,7 @@ import {
 import { SchoolLabels } from '@/features/galaxy/scene/school-labels'
 import type {
   GalaxyPhilosopherNode,
+  GalaxyIdeaSystem,
   GalaxyTelemetry,
 } from '@/features/galaxy/types/galaxy'
 import { Vector3, type PerspectiveCamera } from 'three'
@@ -26,11 +28,16 @@ interface HistoricalGalaxySceneProps {
   nodes: GalaxyPhilosopherNode[]
   selectedPhilosopherId: string | null
   onSelect: (id: string) => void
+  onSelectIdea: (id: string) => void
+  onSelectRelatedIdea: (philosopherId: string, ideaId: string) => void
   onTelemetry: (telemetry: GalaxyTelemetry) => void
   reducedMotion: boolean
   eraGuidesVisible: boolean
   labelsVisible: boolean
   cameraResetRequest: number
+  ideaSystem: GalaxyIdeaSystem
+  connectionsVisible: boolean
+  selectedIdeaId: string | null
 }
 
 export function HistoricalGalaxyScene({
@@ -38,16 +45,22 @@ export function HistoricalGalaxyScene({
   nodes,
   selectedPhilosopherId,
   onSelect,
+  onSelectIdea,
+  onSelectRelatedIdea,
   onTelemetry,
   reducedMotion,
   eraGuidesVisible,
   labelsVisible,
   cameraResetRequest,
+  ideaSystem,
+  connectionsVisible,
+  selectedIdeaId,
 }: HistoricalGalaxySceneProps) {
   const viewport = useThree((state) => state.size)
   const perspectiveCamera = useThree(
     (state) => state.camera,
   ) as PerspectiveCamera
+  const renderer = useThree((state) => state.gl)
   const quality: SceneQuality = useMemo(
     () => getSceneQuality(viewport),
     [viewport],
@@ -73,6 +86,28 @@ export function HistoricalGalaxyScene({
       ) ?? null,
     [nodes, selectedPhilosopherId],
   )
+  const selectedIdeaPosition = useMemo(() => {
+    if (!selectedNode || !ideaSystem.selectedIdea) return null
+
+    const count = Math.max(ideaSystem.ideas.length, 1)
+    const index = ideaSystem.ideas.findIndex(
+      (idea) => idea.id === ideaSystem.selectedIdea?.id,
+    )
+    if (index < 0) return null
+    const angle = -Math.PI / 2 + (index / count) * Math.PI * 2
+    const radius = 1.4 + (index % 2) * 0.34
+
+    return {
+      x: selectedNode.position.x + Math.cos(angle) * radius,
+      y: selectedNode.position.y + Math.sin(angle) * radius * 0.68,
+      z: selectedNode.position.z + 0.24 + Math.sin(angle * 2) * 0.18,
+    }
+  }, [ideaSystem.ideas, ideaSystem.selectedIdea, selectedNode])
+  const focusMode = selectedIdeaPosition
+    ? 'idea'
+    : selectedNode
+      ? 'philosopher'
+      : 'galaxy'
   const handleCameraSettled = useCallback(
     (camera: OverviewCamera, overviewReady: boolean) => {
       const interactionTarget =
@@ -105,11 +140,22 @@ export function HistoricalGalaxyScene({
         visibleNodeCount: nodes.length,
         historicalMinX: bounds.min.x,
         historicalMaxX: bounds.max.x,
-        cameraDistance: selectedNode
-          ? quality.selectionDistance
-          : camera.distance,
+        cameraDistance: selectedIdeaPosition
+          ? quality.ideaSelectionDistance
+          : selectedNode
+            ? quality.selectionDistance
+            : camera.distance,
         overviewReady,
         selectedPhilosopherId,
+        selectedIdeaId,
+        ideaNodeCount:
+          ideaSystem.ideas.length +
+          ideaSystem.agreeingIdeas.length +
+          ideaSystem.disagreeingIdeas.length,
+        agreementEdgeCount: ideaSystem.agreeingIdeas.length,
+        disagreementEdgeCount: ideaSystem.disagreeingIdeas.length,
+        drawCalls: renderer.info.render.calls,
+        focusMode,
         interactionTarget,
       })
     },
@@ -120,8 +166,14 @@ export function HistoricalGalaxyScene({
       onTelemetry,
       perspectiveCamera,
       quality.selectionDistance,
+      quality.ideaSelectionDistance,
+      selectedIdeaPosition,
       selectedNode,
       selectedPhilosopherId,
+      selectedIdeaId,
+      ideaSystem,
+      renderer,
+      focusMode,
       viewport.height,
       viewport.width,
     ],
@@ -135,9 +187,7 @@ export function HistoricalGalaxyScene({
         camera={overviewCamera}
         quality={quality}
       />
-      {eraGuidesVisible ? (
-        <EraGuides bounds={bounds} selectedNode={selectedNode} />
-      ) : null}
+      {eraGuidesVisible ? <HistoricalStreams quality={quality} /> : null}
       {labelsVisible ? <SchoolLabels nodes={nodes} quality={quality} /> : null}
       <PhilosopherNodes
         nodes={nodes}
@@ -145,9 +195,23 @@ export function HistoricalGalaxyScene({
         selectedPhilosopherId={selectedPhilosopherId}
         onSelect={onSelect}
       />
+      {selectedNode && ideaSystem.ideas.length > 0 ? (
+        <IdeaSystemScene
+          center={selectedNode.position}
+          connectionsVisible={connectionsVisible}
+          ideaSystem={ideaSystem}
+          nodes={nodes}
+          onSelectIdea={onSelectIdea}
+          onSelectRelatedIdea={onSelectRelatedIdea}
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
       <CameraRig
         bounds={bounds}
-        focus={selectedNode?.position ?? null}
+        focus={selectedIdeaPosition ?? selectedNode?.position ?? null}
+        focusDistance={
+          selectedIdeaPosition ? quality.ideaSelectionDistance : undefined
+        }
         quality={quality}
         reducedMotion={reducedMotion}
         resetRequest={cameraResetRequest}

@@ -20,6 +20,7 @@ interface CameraRigProps {
   quality: SceneQuality
   reducedMotion: boolean
   resetRequest: number
+  focusDistance?: number
   onCameraSettled: (camera: OverviewCamera, overviewReady: boolean) => void
 }
 
@@ -29,6 +30,7 @@ export function CameraRig({
   quality,
   reducedMotion,
   resetRequest,
+  focusDistance,
   onCameraSettled,
 }: CameraRigProps) {
   const controlsRef = useRef<CameraControlsInstance>(null)
@@ -64,7 +66,7 @@ export function CameraRig({
         .setLookAt(
           focus.x,
           targetY,
-          focus.z + quality.selectionDistance,
+          focus.z + (focusDistance ?? quality.selectionDistance),
           focus.x,
           targetY,
           focus.z,
@@ -97,6 +99,7 @@ export function CameraRig({
       .catch(() => undefined)
   }, [
     focus,
+    focusDistance,
     onCameraSettled,
     overviewCamera,
     quality.selectedTargetOffsetY,

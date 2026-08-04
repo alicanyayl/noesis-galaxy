@@ -4,6 +4,7 @@ import { Component, useState, type ReactNode } from 'react'
 import { HistoricalGalaxyScene } from '@/features/galaxy/scene/historical-galaxy-scene'
 import type {
   GalaxyPhilosopherNode,
+  GalaxyIdeaSystem,
   GalaxyTelemetry,
 } from '@/features/galaxy/types/galaxy'
 import { useExperienceStore } from '@/stores/experience-store'
@@ -12,7 +13,11 @@ export interface GalaxyCanvasProps {
   active: boolean
   nodes: GalaxyPhilosopherNode[]
   selectedPhilosopherId: string | null
+  selectedIdeaId: string | null
+  ideaSystem: GalaxyIdeaSystem
   onSelect: (id: string) => void
+  onSelectIdea: (id: string) => void
+  onSelectRelatedIdea: (philosopherId: string, ideaId: string) => void
   onTelemetry: (telemetry: GalaxyTelemetry) => void
   reducedMotion: boolean
 }
@@ -74,7 +79,11 @@ export function GalaxyCanvas({
   active,
   nodes,
   selectedPhilosopherId,
+  selectedIdeaId,
+  ideaSystem,
   onSelect,
+  onSelectIdea,
+  onSelectRelatedIdea,
   onTelemetry,
   reducedMotion,
 }: GalaxyCanvasProps) {
@@ -85,6 +94,9 @@ export function GalaxyCanvas({
   const labelsVisible = useExperienceStore((state) => state.labelsVisible)
   const cameraResetRequest = useExperienceStore(
     (state) => state.cameraResetRequest,
+  )
+  const connectionsVisible = useExperienceStore(
+    (state) => state.connectionsVisible,
   )
 
   if (!isWebGLAvailable) {
@@ -115,12 +127,17 @@ export function GalaxyCanvas({
           active={active}
           nodes={nodes}
           selectedPhilosopherId={selectedPhilosopherId}
+          selectedIdeaId={selectedIdeaId}
+          ideaSystem={ideaSystem}
           onSelect={onSelect}
+          onSelectIdea={onSelectIdea}
+          onSelectRelatedIdea={onSelectRelatedIdea}
           onTelemetry={onTelemetry}
           reducedMotion={reducedMotion}
           eraGuidesVisible={eraGuidesVisible}
           labelsVisible={labelsVisible}
           cameraResetRequest={cameraResetRequest}
+          connectionsVisible={connectionsVisible}
         />
       </Canvas>
     </SceneBoundary>

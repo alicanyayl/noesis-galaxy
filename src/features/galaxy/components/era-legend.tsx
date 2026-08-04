@@ -3,7 +3,7 @@ import { HISTORICAL_ERAS } from '@/features/galaxy/layout/eras'
 export function EraLegend() {
   return (
     <section
-      className="rounded-xl border border-border/70 bg-background/50 px-3 py-2.5 backdrop-blur-md"
+      className="galaxy-era-legend rounded-xl border border-border/70 bg-background/50 px-3 py-2.5 backdrop-blur-md"
       aria-labelledby="era-legend-title"
     >
       <h2

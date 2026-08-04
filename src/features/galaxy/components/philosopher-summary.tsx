@@ -1,5 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, ExternalLink, LoaderCircle, MapPin, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowLeft,
+  ExternalLink,
+  LoaderCircle,
+  MapPin,
+  Network,
+  X,
+} from 'lucide-react'
 import { useState } from 'react'
 
 import {
@@ -10,45 +18,34 @@ import {
 import { Button } from '@/components/ui/button'
 import { classifyHistoricalEra } from '@/features/galaxy/layout/eras'
 import { formatPhilosopherLifespan } from '@/features/galaxy/layout/lifespan'
+import {
+  philosopherInitials,
+  philosopherPortraitUrl,
+} from '@/features/galaxy/layout/portrait'
+import type { GalaxyIdeaSystem } from '@/features/galaxy/types/galaxy'
 
 interface PhilosopherSummaryPanelProps {
   philosopher: PhilosopherSummary | null
   invalidSelectionId: string | null
+  ideaSystem: GalaxyIdeaSystem
+  onBackToPhilosopher: () => void
   onClose: () => void
+  onExpandIdeas: () => void
+  onSelectIdea: (id: string) => void
 }
 
-function portraitUrl(philosopher: PhilosopherSummary) {
-  const preferredKeys = [
-    'faceImages.face250x250',
-    'faceImages.face500x500',
-    'thumbnailIllustrations.thumbnailIll150x150',
-    'illustrations.ill250x250',
-  ]
-
-  for (const key of preferredKeys) {
-    const url = philosopher.imageReferences[key]
-    if (url) return url
-  }
-
-  return (
-    Object.entries(philosopher.imageReferences).find(
-      ([key, url]) => !key.startsWith('fullImages.') && Boolean(url),
-    )?.[1] ?? null
-  )
+function plainIdeaText(text: string) {
+  return text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
 }
 
 function Portrait({ philosopher }: { philosopher: PhilosopherSummary }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null)
-  const imageUrl = portraitUrl(philosopher)
+  const imageUrl = philosopherPortraitUrl(philosopher)
 
   if (!imageUrl || failedUrl === imageUrl) {
     return (
       <div className="grid size-20 shrink-0 place-items-center rounded-2xl border border-border bg-muted text-xl font-medium text-muted-foreground">
-        {philosopher.name
-          .split(' ')
-          .slice(0, 2)
-          .map((part) => part[0])
-          .join('')}
+        {philosopherInitials(philosopher)}
       </div>
     )
   }
@@ -67,7 +64,11 @@ function Portrait({ philosopher }: { philosopher: PhilosopherSummary }) {
 export function PhilosopherSummaryPanel({
   philosopher,
   invalidSelectionId,
+  ideaSystem,
+  onBackToPhilosopher,
   onClose,
+  onExpandIdeas,
+  onSelectIdea,
 }: PhilosopherSummaryPanelProps) {
   const detailQuery = useQuery(philosopherQueryOptions(philosopher?.id ?? ''))
 
@@ -100,10 +101,11 @@ export function PhilosopherSummaryPanel({
 
   const detail = detailQuery.data
   const era = classifyHistoricalEra(philosopher.birthYear.numeric)
+  const selectedIdea = ideaSystem.selectedIdea
 
   return (
     <aside
-      className="galaxy-summary pointer-events-auto w-full max-w-sm rounded-2xl border border-border/80 bg-background/88 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl"
+      className="galaxy-summary pointer-events-auto w-full max-w-md rounded-2xl border border-border/80 bg-background/88 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl"
       aria-labelledby="selected-philosopher-title"
       aria-live="polite"
     >
@@ -111,7 +113,7 @@ export function PhilosopherSummaryPanel({
         <Portrait philosopher={detail ?? philosopher} />
         <div className="min-w-0 flex-1">
           <p className="text-[0.65rem] font-medium tracking-[0.16em] text-accent uppercase">
-            {era.label} · Selected
+            {selectedIdea ? 'Idea network' : `${era.label} · Local system`}
           </p>
           <h2
             id="selected-philosopher-title"
@@ -131,11 +133,56 @@ export function PhilosopherSummaryPanel({
           size="icon"
           variant="ghost"
           onClick={onClose}
-          aria-label="Close philosopher summary"
+          aria-label="Back to galaxy"
         >
           <X aria-hidden="true" />
         </Button>
       </div>
+
+      {selectedIdea ? (
+        <section
+          className="mt-4 rounded-xl border border-accent/20 bg-accent/5 p-3.5"
+          aria-labelledby="selected-idea-title"
+          data-testid="selected-idea-detail"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <p
+              id="selected-idea-title"
+              className="text-[0.62rem] font-semibold tracking-[0.15em] text-accent uppercase"
+            >
+              Selected idea
+            </p>
+            <Button
+              className="h-7 rounded-full px-2.5 text-[0.68rem]"
+              size="sm"
+              variant="ghost"
+              onClick={onBackToPhilosopher}
+            >
+              <ArrowLeft aria-hidden="true" />
+              Back to philosopher
+            </Button>
+          </div>
+          <p className="mt-2 font-serif text-sm leading-6 text-foreground/92">
+            {plainIdeaText(selectedIdea.text)}
+          </p>
+          <dl className="mt-3 flex flex-wrap gap-2 text-[0.66rem]">
+            <div className="rounded-full border border-border/70 px-2 py-1">
+              Categories ·{' '}
+              {selectedIdea.categoryAbbreviations.join(', ') || 'Unclassified'}
+            </div>
+            <div className="rounded-full border border-teal-300/25 px-2 py-1 text-teal-100">
+              {selectedIdea.agreeingKeyIdeaIds.length} continuous agreements
+            </div>
+            <div className="rounded-full border border-orange-300/25 px-2 py-1 text-orange-100">
+              {selectedIdea.disagreeingKeyIdeaIds.length} interrupted disagreements
+              {selectedIdea.disagreeingKeyIdeaIds.length >
+              ideaSystem.disagreeingIdeas.length
+                ? ` · ${ideaSystem.disagreeingIdeas.length} shown`
+                : ''}
+            </div>
+          </dl>
+        </section>
+      ) : null}
 
       <dl className="mt-5 grid gap-3 text-sm">
         <div>
@@ -163,13 +210,51 @@ export function PhilosopherSummaryPanel({
         ) : null}
       </dl>
 
+      {ideaSystem.ideas.length > 0 ? (
+        <section className="mt-4 border-t border-border/70 pt-4" aria-labelledby="key-ideas-title">
+          <div className="flex items-center justify-between gap-3">
+            <h3 id="key-ideas-title" className="flex items-center gap-2 text-sm font-medium">
+              <Network className="size-3.5 text-accent" aria-hidden="true" />
+              Key ideas
+            </h3>
+            <span className="text-[0.65rem] tabular-nums text-muted-foreground">
+              {ideaSystem.ideas.length}/{ideaSystem.totalIdeaCount}
+            </span>
+          </div>
+          <div className="mt-2.5 grid gap-1.5">
+            {ideaSystem.ideas.map((idea, index) => (
+              <button
+                key={idea.id}
+                className={`galaxy-panel-idea${idea.id === selectedIdea?.id ? ' galaxy-panel-idea--selected' : ''}`}
+                type="button"
+                onClick={() => onSelectIdea(idea.id)}
+                aria-label={`Select idea ${index + 1}`}
+              >
+                <span>{idea.order ?? index + 1}</span>
+                <span>{plainIdeaText(idea.text)}</span>
+              </button>
+            ))}
+          </div>
+          {ideaSystem.ideas.length < ideaSystem.totalIdeaCount ? (
+            <Button
+              className="mt-2.5 h-8 rounded-full text-xs"
+              size="sm"
+              variant="outline"
+              onClick={onExpandIdeas}
+            >
+              Show all {ideaSystem.totalIdeaCount} ideas
+            </Button>
+          ) : null}
+        </section>
+      ) : null}
+
       {(detail ?? philosopher).topicalDescription ? (
         <p className="mt-4 border-t border-border/70 pt-4 text-sm leading-6 text-foreground/80">
           {(detail ?? philosopher).topicalDescription}
         </p>
       ) : null}
 
-      {detailQuery.isFetching ? (
+      {detailQuery.isFetching || ideaSystem.isLoading ? (
         <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground" role="status">
           <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
           Loading selected record…

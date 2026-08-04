@@ -1,4 +1,4 @@
-import { Focus, LocateFixed, Tags, Waypoints } from 'lucide-react'
+import { Focus, LocateFixed, Tags, Unplug, Waypoints } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useExperienceStore } from '@/stores/experience-store'
@@ -23,6 +23,12 @@ export function SceneControls({
   const toggleLabels = useExperienceStore((state) => state.toggleLabels)
   const toggleEraGuides = useExperienceStore(
     (state) => state.toggleEraGuides,
+  )
+  const connectionsVisible = useExperienceStore(
+    (state) => state.connectionsVisible,
+  )
+  const toggleConnections = useExperienceStore(
+    (state) => state.toggleConnections,
   )
 
   return (
@@ -58,11 +64,20 @@ export function SceneControls({
       <Button
         className="h-9 rounded-full bg-background/55 backdrop-blur-md"
         variant="outline"
+        aria-pressed={connectionsVisible}
+        onClick={toggleConnections}
+      >
+        <Unplug aria-hidden="true" />
+        Connections {connectionsVisible ? 'on' : 'off'}
+      </Button>
+      <Button
+        className="h-9 rounded-full bg-background/55 backdrop-blur-md"
+        variant="outline"
         aria-pressed={eraGuidesVisible}
         onClick={toggleEraGuides}
       >
         <Waypoints aria-hidden="true" />
-        Eras {eraGuidesVisible ? 'on' : 'off'}
+        Galaxy path {eraGuidesVisible ? 'on' : 'off'}
       </Button>
     </div>
   )

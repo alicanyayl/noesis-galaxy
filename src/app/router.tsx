@@ -17,6 +17,7 @@ const rootRoute = createRootRoute({
 
 const rootSearchSchema = z.object({
   philosopher: z.string().optional(),
+  idea: z.string().optional(),
 })
 
 const indexRoute = createRoute({

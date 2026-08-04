@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 
 import {
   fetchCategories,
+  fetchKeyIdeas,
   fetchKeyIdea,
   fetchPhilosopher,
   fetchPhilosophers,
@@ -64,6 +65,15 @@ export function keyIdeaQueryOptions(id: string) {
     queryFn: ({ signal }) => fetchKeyIdea(id, { signal }),
     enabled: id.length > 0,
     staleTime: DETAIL_STALE_TIME,
+    retry: retryTransientFailure,
+  })
+}
+
+export function keyIdeasQueryOptions() {
+  return queryOptions({
+    queryKey: philosophersQueryKeys.keyIdeas(),
+    queryFn: ({ signal }) => fetchKeyIdeas({ signal }),
+    staleTime: COLLECTION_STALE_TIME,
     retry: retryTransientFailure,
   })
 }

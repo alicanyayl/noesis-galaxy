@@ -14,16 +14,24 @@ import { philosophersQueryOptions } from '@/api/philosophers'
 import { Button } from '@/components/ui/button'
 import { AccessiblePhilosopherList } from '@/features/galaxy/components/accessible-philosopher-list'
 import { EraLegend } from '@/features/galaxy/components/era-legend'
-import { PhilosopherSummaryPanel } from '@/features/galaxy/components/philosopher-summary'
 import { SceneControls } from '@/features/galaxy/components/scene-controls'
 import { SceneLoadingState } from '@/features/galaxy/components/scene-loading-state'
 import { useGalaxyPhilosophers } from '@/features/galaxy/hooks/use-galaxy-philosophers'
+import { usePhilosopherIdeaSystem } from '@/features/galaxy/hooks/use-philosopher-idea-system'
+import { classifyHistoricalEra } from '@/features/galaxy/layout/eras'
+import { MAX_VISIBLE_IDEAS } from '@/features/galaxy/layout/idea-system'
 import type { GalaxyTelemetry } from '@/features/galaxy/types/galaxy'
 import { useExperienceStore } from '@/stores/experience-store'
 
 const GalaxyCanvas = lazy(() =>
   import('@/features/galaxy/components/galaxy-canvas').then((module) => ({
     default: module.GalaxyCanvas,
+  })),
+)
+
+const PhilosopherSummaryPanel = lazy(() =>
+  import('@/features/galaxy/components/philosopher-summary').then((module) => ({
+    default: module.PhilosopherSummaryPanel,
   })),
 )
 
@@ -68,15 +76,24 @@ export function HistoricalGalaxyExperience() {
   const philosophers = philosophersQuery.data ?? []
   const nodes = useGalaxyPhilosophers(philosophers)
   const [telemetry, setTelemetry] = useState<GalaxyTelemetry | null>(null)
+  const [visibleIdeaLimit, setVisibleIdeaLimit] = useState(MAX_VISIBLE_IDEAS)
   const requestedPhilosopherId = search.philosopher?.trim() || null
   const selectedPhilosopher =
     philosophers.find(
       (philosopher) => philosopher.id === requestedPhilosopherId,
     ) ?? null
+  const requestedIdeaId = selectedPhilosopher
+    ? search.idea?.trim() || null
+    : null
   const invalidSelectionId =
     philosophersQuery.isSuccess && requestedPhilosopherId && !selectedPhilosopher
       ? requestedPhilosopherId
       : null
+  const ideaSystem = usePhilosopherIdeaSystem(
+    selectedPhilosopher?.id ?? null,
+    requestedIdeaId,
+    visibleIdeaLimit,
+  )
   const prefersReducedMotion = useReducedMotion() ?? false
   const mode = useExperienceStore((state) => state.mode)
   const setMode = useExperienceStore((state) => state.setMode)
@@ -91,11 +108,36 @@ export function HistoricalGalaxyExperience() {
 
   const selectPhilosopher = useCallback(
     (id: string) => {
+      setVisibleIdeaLimit(MAX_VISIBLE_IDEAS)
       void navigate({ search: { philosopher: id } })
       setMode('explore')
     },
     [navigate, setMode],
   )
+
+  const selectIdea = useCallback(
+    (id: string) => {
+      if (!selectedPhilosopher) return
+      void navigate({
+        search: { philosopher: selectedPhilosopher.id, idea: id },
+      })
+    },
+    [navigate, selectedPhilosopher],
+  )
+
+  const selectRelatedIdea = useCallback(
+    (philosopherId: string, ideaId: string) => {
+      setVisibleIdeaLimit(MAX_VISIBLE_IDEAS)
+      void navigate({ search: { philosopher: philosopherId, idea: ideaId } })
+      setMode('explore')
+    },
+    [navigate, setMode],
+  )
+
+  const backToPhilosopher = useCallback(() => {
+    if (!selectedPhilosopher) return
+    void navigate({ search: { philosopher: selectedPhilosopher.id } })
+  }, [navigate, selectedPhilosopher])
 
   const clearSelection = useCallback(() => {
     void navigate({ search: {} })
@@ -123,11 +165,16 @@ export function HistoricalGalaxyExperience() {
     [],
   )
 
+  const currentEra = selectedPhilosopher
+    ? classifyHistoricalEra(selectedPhilosopher.birthYear.numeric).label
+    : 'Ancient core → contemporary frontier'
+
   return (
     <main
       className="relative isolate min-h-svh overflow-x-hidden bg-background text-foreground"
       data-reduced-motion={prefersReducedMotion}
       data-scene-ready={sceneReady}
+      data-focus-mode={requestedIdeaId ? 'idea' : selectedPhilosopher ? 'philosopher' : 'galaxy'}
     >
       <div className="fixed inset-0 -z-20">
         <Suspense fallback={null}>
@@ -135,7 +182,11 @@ export function HistoricalGalaxyExperience() {
             active={isActive}
             nodes={nodes}
             selectedPhilosopherId={selectedPhilosopher?.id ?? null}
+            selectedIdeaId={ideaSystem.selectedIdea?.id ?? requestedIdeaId}
+            ideaSystem={ideaSystem}
             onSelect={selectPhilosopher}
+            onSelectIdea={selectIdea}
+            onSelectRelatedIdea={selectRelatedIdea}
             onTelemetry={handleTelemetry}
             reducedMotion={prefersReducedMotion}
           />
@@ -186,7 +237,7 @@ export function HistoricalGalaxyExperience() {
               ? 'Mapping history'
               : philosophersQuery.isError
                 ? 'Data unavailable'
-                : `${philosophers.length} thinkers`}
+                : currentEra}
           </div>
         </header>
 
@@ -197,17 +248,18 @@ export function HistoricalGalaxyExperience() {
               aria-labelledby="page-title"
             >
               <p className="text-[0.63rem] font-medium tracking-[0.2em] text-accent uppercase">
-                Phase 2.5 · Historical galaxy
+                Living atlas · Historical galaxy
               </p>
               <h1
                 id="page-title"
                 className="mt-1.5 text-2xl font-medium tracking-[-0.04em] sm:text-3xl"
               >
-                Philosophy across time
+                Follow the arc of thought
               </h1>
               <p className="mt-2 max-w-md text-xs leading-5 text-foreground/78 sm:text-sm sm:leading-6">
-                Horizontal position follows birth year. Nearby clusters share
-                school metadata—not direct influence.
+                History spirals from the ancient core into an expanding
+                frontier. Constellation proximity marks shared school metadata,
+                not direct influence.
               </p>
             </section>
             <div className="pointer-events-auto w-full">
@@ -265,11 +317,19 @@ export function HistoricalGalaxyExperience() {
             </div>
 
             <div className="galaxy-summary-slot justify-self-end">
-              <PhilosopherSummaryPanel
-                philosopher={selectedPhilosopher}
-                invalidSelectionId={invalidSelectionId}
-                onClose={clearSelection}
-              />
+              <Suspense fallback={null}>
+                <PhilosopherSummaryPanel
+                  philosopher={selectedPhilosopher}
+                  invalidSelectionId={invalidSelectionId}
+                  ideaSystem={ideaSystem}
+                  onBackToPhilosopher={backToPhilosopher}
+                  onClose={clearSelection}
+                  onExpandIdeas={() =>
+                    setVisibleIdeaLimit(ideaSystem.totalIdeaCount)
+                  }
+                  onSelectIdea={selectIdea}
+                />
+              </Suspense>
             </div>
           </div>
         </div>

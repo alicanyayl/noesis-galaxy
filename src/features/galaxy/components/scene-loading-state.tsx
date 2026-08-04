@@ -28,8 +28,8 @@ export function SceneLoadingState({
           <span />
         </span>
         <p className="galaxy-loading__note">
-          Birth years set the horizontal path. School metadata forms the
-          surrounding groups.
+          Birth years follow the curved historical stream. School metadata
+          forms nearby constellations.
         </p>
         <LoaderCircle
           className="galaxy-loading__spinner"

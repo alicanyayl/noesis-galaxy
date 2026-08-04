@@ -1,4 +1,4 @@
-import type { PhilosopherSummary } from '@/api/philosophers'
+import type { KeyIdea, PhilosopherSummary } from '@/api/philosophers'
 import type { HistoricalEra } from '@/features/galaxy/layout/eras'
 
 export interface GalaxyPosition {
@@ -14,6 +14,24 @@ export interface GalaxyPhilosopherNode {
   color: string
   schoolKey: string
   schoolLabel: string
+  pathProgress: number
+}
+
+export type IdeaRelationKind = 'owner' | 'agreement' | 'disagreement'
+
+export interface GalaxyIdeaNode {
+  idea: KeyIdea
+  position: GalaxyPosition
+  relation: IdeaRelationKind
+}
+
+export interface GalaxyIdeaSystem {
+  ideas: KeyIdea[]
+  totalIdeaCount: number
+  selectedIdea: KeyIdea | null
+  agreeingIdeas: KeyIdea[]
+  disagreeingIdeas: KeyIdea[]
+  isLoading: boolean
 }
 
 export interface GalaxyTelemetry {
@@ -24,6 +42,12 @@ export interface GalaxyTelemetry {
   cameraDistance: number
   overviewReady: boolean
   selectedPhilosopherId: string | null
+  selectedIdeaId: string | null
+  ideaNodeCount: number
+  agreementEdgeCount: number
+  disagreementEdgeCount: number
+  drawCalls: number
+  focusMode: 'galaxy' | 'philosopher' | 'idea'
   interactionTarget?: {
     philosopherId: string
     screenX: number

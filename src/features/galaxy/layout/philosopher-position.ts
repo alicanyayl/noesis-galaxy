@@ -6,22 +6,33 @@ import type {
 
 import { deterministicSigned } from './deterministic-hash'
 import { classifyHistoricalEra } from './eras'
-import { mapHistoricalYearToX } from './historical-axis'
+import {
+  historicalCurvePoint,
+  historicalCurveTangent,
+  historicalPathProgress,
+} from './historical-curve'
 import { getSchoolCluster } from './school-clusters'
 
 export function createPhilosopherGalaxyPosition(
   philosopher: PhilosopherSummary,
 ): GalaxyPosition {
   const cluster = getSchoolCluster(philosopher.school)
+  const pathProgress = historicalPathProgress(philosopher.birthYear.numeric)
+  const point = historicalCurvePoint(pathProgress)
+  const tangent = historicalCurveTangent(Math.min(pathProgress, 1))
+  const normal = { x: -tangent.y, y: tangent.x }
+  const schoolBand = deterministicSigned(cluster.key, 'curve-band') * 0.62
+  const localBand =
+    deterministicSigned(philosopher.id, `${cluster.key}:local-band`) * 0.38
+  const offset = schoolBand + localBand
 
   return {
-    x: mapHistoricalYearToX(philosopher.birthYear.numeric),
-    y:
-      cluster.y +
-      deterministicSigned(philosopher.id, `${cluster.key}:local-y`) * 0.58,
+    x: point.x + normal.x * offset,
+    y: point.y + normal.y * offset,
     z:
-      cluster.z +
-      deterministicSigned(philosopher.id, `${cluster.key}:local-z`) * 0.62,
+      point.z +
+      deterministicSigned(cluster.key, 'curve-depth') * 0.28 +
+      deterministicSigned(philosopher.id, `${cluster.key}:local-depth`) * 0.36,
   }
 }
 
@@ -30,6 +41,7 @@ export function createGalaxyPhilosopherNode(
 ): GalaxyPhilosopherNode {
   const cluster = getSchoolCluster(philosopher.school)
   const era = classifyHistoricalEra(philosopher.birthYear.numeric)
+  const pathProgress = historicalPathProgress(philosopher.birthYear.numeric)
 
   return {
     philosopher,
@@ -38,6 +50,7 @@ export function createGalaxyPhilosopherNode(
     color: era.color,
     schoolKey: cluster.key,
     schoolLabel: cluster.label,
+    pathProgress,
   }
 }
 
@@ -48,7 +61,7 @@ export function createGalaxyPhilosopherNodes(
     .map(createGalaxyPhilosopherNode)
     .sort(
       (first, second) =>
-        first.position.x - second.position.x ||
+        first.pathProgress - second.pathProgress ||
         first.philosopher.name.localeCompare(second.philosopher.name),
     )
 }
