@@ -12,11 +12,13 @@ dist
 dist-ssr
 coverage
 .vite
+bundle-analysis
+stats.html
+*-safety-*/
 
 # Local environment files
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
 
 # Editor directories and files
 .vscode/*
@@ -33,3 +35,6 @@ Thumbs.db
 # Generated test reports
 playwright-report
 test-results
+blob-report
+**/trace.zip
+**/*.webm

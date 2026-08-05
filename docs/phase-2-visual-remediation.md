@@ -13,7 +13,7 @@ untouched evidence are preserved in the
 | --- | --- | --- |
 | Desktop, 1440 × 900 | [Baseline](screenshots/phase-2-before-desktop.png) | [Remediated](screenshots/noesis-galaxy-desktop.png) |
 | Tablet, 1024 × 768 | [Baseline](screenshots/phase-2-before-tablet.png) | [Remediated](screenshots/noesis-galaxy-tablet.png) |
-| Mobile, 390 × 844 | [Baseline](screenshots/phase-2-before-mobile.png) | [Remediated](screenshots/noesis-galaxy-mobile.png) |
+| Mobile, 390 × 844 | [Baseline](screenshots/phase-2-before-mobile.png) | [Remediated](screenshots/noesis-galaxy-mobile-phase-2.png) |
 | Selected philosopher | — | [Adam Smith selected](screenshots/noesis-galaxy-selected-philosopher.png) |
 
 The captures use Playwright 1.62.1 and its installed Chromium build against the

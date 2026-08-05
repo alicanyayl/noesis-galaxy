@@ -1,113 +1,117 @@
 # Noesis Galaxy
 
-An interactive Three.js atlas of philosophers, ideas, history, agreement, and
-contradiction.
+Noesis Galaxy is a completed GitHub portfolio demonstration: an interactive
+Three.js atlas that places philosophers and their ideas in a deterministic
+historical galaxy.
 
-## Status
+The runtime uses the public Philosophers API. Tests replace that network with
+deterministic fixtures, so browser behavior can be verified without pretending
+that fixture data is the live service. This repository does not include a
+backend, persistence layer, authentication, or deployment configuration.
 
-The Phase 2 galaxy redesign is implemented. The official Philosophers API
-drives a deterministic, curved historical universe containing every validated
-philosopher. Selecting a thinker reveals their key-idea system; selecting an
-idea reveals only the API's explicit agreement and disagreement relationships.
+## Final presentation
 
-![Noesis Galaxy redesigned overview](docs/screenshots/noesis-redesign-overview.png)
+![Noesis Galaxy overview](docs/screenshots/noesis-galaxy-overview.png)
 
-| Philosopher system | Explicit idea network | Mobile focus |
-| --- | --- | --- |
-| ![René Descartes and key ideas](docs/screenshots/noesis-redesign-philosopher.png) | ![Dualism agreement and disagreement network](docs/screenshots/noesis-redesign-idea-network.png) | ![Mobile philosopher bottom sheet](docs/screenshots/noesis-redesign-mobile.png) |
+| Philosopher focus | Mobile focus |
+| --- | --- |
+| ![René Descartes celestial system](docs/screenshots/noesis-galaxy-philosopher.png) | ![Noesis Galaxy mobile philosopher focus](docs/screenshots/noesis-galaxy-mobile.png) |
 
-All four images are real Playwright Chromium/WebGL captures using the live API.
-The visual reasoning, relationship sample, performance measurements, and known
-limits are documented in the [Phase 2 galaxy redesign notes](docs/phase-2-galaxy-redesign.md).
+The approved implementation and its limitations are recorded in the
+[Phase 2.75 visual finalization](docs/phase-2-75-visual-finalization.md).
 
-## Explore
+## What the demonstration includes
 
-- Read history from the ancient core through the medieval orbit and expanding
-  modern and contemporary arms.
-- Hover a philosopher to reveal a lazy thumbnail, name, lifespan, and school.
-- Select a philosopher node—or use the accessible explorer—to enter their local
-  key-idea system.
-- Select an idea to reveal its text, categories, owning thinker, and explicit
-  agreeing or disagreeing ideas.
-- Follow smooth, flowing cyan connections for agreement and broken angular
-  amber connections for disagreement. Shape, labels, and motion distinguish the
-  relationships without relying on color.
-- Select a related idea to travel to its owning philosopher and preserve the
-  relationship in the URL.
-- Use **Back to philosopher**, **Back to galaxy**, or **Reset view** to leave a
-  focus state.
-- Toggle connections, school regions, and the historical galaxy path; drag to
-  orbit and scroll or pinch to zoom.
+- An era-weighted deterministic spiral from the ancient core to the
+  contemporary frontier, with three soft dust arms and real z-depth.
+- Every validated API philosopher rendered as an equal-importance, shared
+  instanced celestial sphere with directional shading, rim light, and subtle
+  procedural surface variation.
+- Three round-star background layers with cool, neutral, and warm temperature
+  variation.
+- A selected philosopher presented as a restrained solar system with bounded
+  idea satellites and progressive disclosure.
+- Agreement and disagreement shown only when the selected idea's API record
+  explicitly supplies those relationships. School, category, date, distance,
+  and prose never create inferred edges.
+- URL-restorable philosopher and idea selection.
+- Responsive desktop and mobile camera modes with stable wheel and pinch zoom.
 
-Selection is shareable as
-`/?philosopher=<philosopher-id>&idea=<key-idea-id>`. TanStack Router owns browser
-history; camera coordinates are not persisted.
+## Controls
 
-## Visual and data model
+- Drag to orbit; use the wheel or pinch gesture to dolly while preserving the
+  current semantic target.
+- **Reset** returns to the complete galaxy.
+- **Schools** reveals the limited school labels in overview.
+- **Links** toggles direct idea links while focused.
+- **Motion** pauses background and idea-orbit movement.
+- **Explore accessible list** opens the keyboard-accessible HTML alternative
+  for browsing and selecting every philosopher.
+- **Back to philosopher** and **Back to galaxy** unwind idea and philosopher
+  focus states.
 
-Birth year becomes an era-weighted progress scalar on a deterministic spiral.
-The scalar remains chronological while giving Ancient, Medieval, Early modern,
-Modern, and Contemporary records enough authored arc length to remain legible.
-Unknown years occupy a separate uncertainty location.
+`CameraControls` runs with `dollyToCursor` disabled, explicit distance bounds,
+and reduced damping. Zoom changes distance without retargeting toward the
+pointer or scrolling the document.
 
-School metadata adds a small deterministic offset normal to the historical
-curve. Soft regions and local proximity therefore mean shared metadata only:
-they do not imply influence, lineage, agreement, or causation.
+## Visual encoding and data boundaries
 
-Philosophers use equal base importance. The scene does not guess fame or
-importance. Every thinker shares the same instanced core/halo system, with only
-hover and selection changing emphasis.
+Birth year determines chronological progress along the spiral. School metadata
+adds only a small deterministic local offset; proximity does not imply
+influence or agreement. Philosopher bodies have equal base importance. Their
+restrained color and accent variation is presentational and never a rank.
 
-The philosopher detail and key-idea collection load on selection. Only the
-selected key idea requests its detail record, which supplies explicit
-`agreeingKeyIdeas` and `disagreeingKeyIdeas`. No relation is inferred from
-category, school, date, or proximity.
+The overview requests no portraits. Hover can request a small thumbnail, while
+selection requests one face or illustration used by both the scene medallion
+and detail panel through the browser cache. Initials remain the fallback.
 
-## Portrait strategy
+The production application queries `https://philosophersapi.com`. Unit and
+Playwright tests intercept those requests with versioned fixtures. `pnpm
+api:smoke` is the separate live-service contract check.
 
-The overview makes no image requests. Hover prefers an API thumbnail. A selected
-scene medallion and HTML detail panel prefer a modest face/illustration asset,
-share the browser cache, keep the original aspect ratio with `object-fit`, and
-fall back to initials. Full-body and full-resolution portrait sets are never
-loaded eagerly.
+## Accessibility and responsive behavior
 
-## Accessibility and motion
+The accessible explorer is focus-managed and keyboard operable. Philosopher,
+era, lifespan, school, idea, and relationship meaning remains available as HTML
+text. The explorer also remains available when WebGL is unsupported or the
+scene boundary fails.
 
-The focus-managed accessible explorer remains usable when WebGL is unsupported
-or the scene boundary fails. Era, school, lifespan, idea, and relationship
-meaning are also present as HTML text. Buttons expose pressed state and have
-keyboard focus styles.
+Reduced-motion preference makes camera transitions immediate and freezes
+ambient, orbit, and landmark movement without hiding content. At 390×844 the
+selected detail becomes a scrollable bottom sheet capped at 42svh, leaving the
+celestial system visible above it.
 
-Reduced-motion preference changes camera transitions to immediate movement,
-stops the flowing agreement marker, and preserves every label and relationship.
-On mobile, selection becomes a scrollable bottom sheet while the local system
-remains visible above it.
+## Measured performance
 
-## Performance
+Measurements below come from the final production build and Chromium runtime
+on 2026-08-05. Draw calls may vary slightly by browser and GPU.
 
-- Philosopher cores and halos: two instanced meshes for 114 live records
-- Overview: 31 measured draw calls and zero image requests
-- Philosopher focus: 6 visible idea nodes and 44 measured draw calls
-- Idea focus: 13 semantic idea/relation nodes and 67 measured draw calls
-- Initial JavaScript: 499.80 kB (154.98 kB gzip)
-- Lazy galaxy JavaScript: 974.21 kB (258.80 kB gzip)
-- Lazy philosopher summary: 7.88 kB (2.66 kB gzip)
-- CSS: 53.79 kB (10.53 kB gzip)
+| Metric | Final measurement |
+| --- | ---: |
+| Initial JavaScript | 499.87 kB / 155.10 kB gzip |
+| Lazy galaxy JavaScript | 988.98 kB / 263.14 kB gzip |
+| Lazy philosopher summary | 8.15 kB / 2.72 kB gzip |
+| CSS | 55.34 kB / 10.75 kB gzip |
+| Overview draw calls | 22 |
+| Desktop philosopher-focus draw calls | 38 |
+| Mobile philosopher-focus draw calls | 34 |
+| Desktop background stars | 4,148 |
+| Mobile background stars | 1,418 |
 
-Vite's >500 kB advisory remains for the on-demand Three.js galaxy chunk. The
-initial application script remains below that threshold.
+The on-demand Three.js galaxy chunk remains above Vite's 500 kB advisory. It is
+lazy-loaded and no additional bundle-optimization phase was added.
 
 ## Technology
 
 - React 19, strict TypeScript 6, and Vite 8
 - Three.js, React Three Fiber, and Drei CameraControls
-- TanStack Router and TanStack Query
-- Zod, Zustand, Motion, Tailwind CSS 4, Base UI, and Lucide React
-- Vitest, React Testing Library, Playwright Chromium, ESLint 10, and pnpm 10
+- TanStack Router, TanStack Query, Zod, and Zustand
+- Tailwind CSS 4, Base UI, Motion, and Lucide React
+- Vitest, React Testing Library, Playwright Chromium, ESLint, and pnpm
 
 ## Requirements and commands
 
-- Node.js 22.12 or newer; Node.js 24 is used in CI
+- Node.js 22.12 or newer; CI uses Node.js 24
 - pnpm 10.30.0
 
 ```powershell
@@ -120,28 +124,29 @@ pnpm dev
 | Command | Purpose |
 | --- | --- |
 | `pnpm dev` | Start the Vite development server |
-| `pnpm build` | Type-check application code and create a production build |
-| `pnpm preview` | Preview the production build locally |
-| `pnpm lint` | Run ESLint with zero warnings allowed |
+| `pnpm preview` | Serve the production build locally |
+| `pnpm lint` | Run ESLint with zero warnings |
 | `pnpm typecheck` | Type-check application, scripts, and tests |
-| `pnpm test:run` | Run the deterministic Vitest suite |
+| `pnpm test:run` | Run deterministic Vitest tests |
 | `pnpm test:e2e` | Run deterministic Chromium interaction tests |
-| `pnpm api:smoke` | Fetch and validate the live philosopher collection |
-| `pnpm check` | Run lint, typechecking, tests, and production build |
+| `pnpm api:smoke` | Validate the live Philosophers API contract |
+| `pnpm build` | Type-check and create the production build |
+| `pnpm check` | Run lint, typecheck, Vitest, and build |
 
-## Roadmap
+## Project status and limitations
 
-- [x] Phase 0: Foundation
-- [x] Phase 1: Philosophers API data foundation
-- [x] Phase 2: Historical galaxy
-- [x] Phase 2.5: Visual readability remediation
-- [x] Phase 2 redesign: Curved galaxy and explicit idea relationships
-- [ ] Phase 3: Scroll-driven historical narrative
-- [ ] Later: Branching journeys, encounters, and the full Idea Clash mode
+The portfolio demonstration is complete through the approved Phase 2.75 visual
+system. Phase 3 storytelling could be explored in the future, but it is neither
+implemented nor required for this project to be complete.
 
-The current phase intentionally excludes scroll storytelling, branching
-questions, quizzes, audio, maps, imported 3D models, authentication, database,
-persistence, backend work, and deployment.
+Known limitations:
+
+- Visual QA and E2E coverage target Chromium, not Firefox or WebKit.
+- Live content depends on the external Philosophers API being available and
+  preserving its validated contract.
+- HTML scene labels can approach viewport edges after aggressive free orbit;
+  the detail panel and accessible explorer preserve the same information.
+- The lazy Three.js chunk retains the documented Vite size advisory.
 
 ## License
 
