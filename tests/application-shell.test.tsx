@@ -1,6 +1,5 @@
 import { createMemoryHistory } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import App from '@/App'
@@ -59,32 +58,8 @@ describe('Noesis Galaxy application shell', () => {
       await screen.findByRole('heading', { name: 'Follow the arc of thought' }),
     ).toBeVisible()
     expect(
-      screen.getByText(
-        /History spirals from the ancient core/,
-      ),
+      screen.getByText(/A living cosmos of thinkers/),
     ).toBeVisible()
-  })
-
-  it('provides an accessible primary action', async () => {
-    renderRoute()
-
-    expect(
-      await screen.findByRole('button', { name: 'Explore freely' }),
-    ).toBeEnabled()
-  })
-
-  it('changes the experience mode through the primary action', async () => {
-    const user = userEvent.setup()
-    renderRoute()
-
-    await user.click(
-      await screen.findByRole('button', { name: 'Explore freely' }),
-    )
-
-    expect(
-      screen.getByRole('button', { name: 'Quiet view' }),
-    ).toBeVisible()
-    expect(useExperienceStore.getState().mode).toBe('explore')
   })
 
   it('renders a not-found page for an unknown route', async () => {

@@ -150,7 +150,7 @@ describe('historical galaxy URL and accessible exploration', () => {
     expect(
       await screen.findByRole('heading', { name: 'Adam Smith' }),
     ).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Reset view' }))
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
 
     await waitFor(() => {
       expect(

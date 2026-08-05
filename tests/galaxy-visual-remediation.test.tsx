@@ -87,8 +87,8 @@ describe('galaxy visual remediation geometry', () => {
 
     expect([desktop.viewportClass, tablet.viewportClass, mobile.viewportClass])
       .toEqual(['desktop', 'tablet', 'mobile'])
-    expect(mobile.decorativeStarCount).toBeLessThan(
-      desktop.decorativeStarCount,
+    expect(mobile.distantStarCount).toBeLessThan(
+      desktop.distantStarCount,
     )
     expect(mobile.nodeScaleMultiplier).toBeGreaterThan(
       desktop.nodeScaleMultiplier,
@@ -110,7 +110,7 @@ describe('galaxy visual remediation interface', () => {
     expect(
       screen.getByRole('heading', { name: 'Historical direction' }),
     ).toBeVisible()
-    expect(screen.getByText(/BCE.*CE/)).toBeVisible()
+    expect(screen.getAllByRole('listitem')).toHaveLength(5)
     expect(screen.getByText('Ancient')).toBeVisible()
     expect(screen.getByText('Contemporary')).toBeVisible()
   })

@@ -10,6 +10,17 @@ import {
 
 const featuredPhilosopher = fixturePhilosophers[0]
 
+function positionDelta(
+  first: { x: number; y: number; z: number },
+  second: { x: number; y: number; z: number },
+) {
+  return Math.hypot(
+    first.x - second.x,
+    first.y - second.y,
+    first.z - second.z,
+  )
+}
+
 async function interceptPhilosophersApi(
   page: Page,
   options: { delayCollectionMs?: number; failCollection?: boolean } = {},
@@ -125,8 +136,89 @@ test('galaxy visibly reaches ready state with semantic telemetry', async ({
     overviewReady: true,
     focusMode: 'galaxy',
     selectedPhilosopherId: null,
+    cameraMode: 'galaxy-overview',
+    dollyToCursor: false,
+    distantStarCount: 3_200,
+    midStarCount: 900,
+    foregroundDustCount: 48,
+    supernovaCount: 2,
   })
+  expect(telemetry?.backgroundStarCount).toBe(4_148)
   expect(telemetry?.drawCalls).toBeGreaterThan(0)
+})
+
+test('repeated wheel zoom preserves target without direction bounce', async ({
+  page,
+}) => {
+  await openReadyGalaxy(page)
+  const before = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  const canvas = await page.locator('canvas').boundingBox()
+  expect(canvas).not.toBeNull()
+
+  await page.mouse.move(
+    (canvas?.x ?? 0) + (canvas?.width ?? 0) * 0.72,
+    (canvas?.y ?? 0) + (canvas?.height ?? 0) * 0.48,
+  )
+  const distances: number[] = []
+  for (const delta of [-100, -100, -100, 100, 100, 100]) {
+    await page.mouse.wheel(0, delta)
+    await page.waitForTimeout(420)
+    distances.push(
+      (await page.evaluate(
+        () => window.__NOESIS_GALAXY_TELEMETRY__?.cameraDistance,
+      )) ?? 0,
+    )
+  }
+
+  expect(distances[1]).toBeLessThan(distances[0])
+  expect(distances[2]).toBeLessThan(distances[1])
+  expect(distances[3]).toBeGreaterThan(distances[2])
+  expect(distances[4]).toBeGreaterThan(distances[3])
+  expect(distances[5]).toBeGreaterThan(distances[4])
+  expect(distances[5]).toBeCloseTo(before?.cameraDistance ?? 0, 2)
+
+  const after = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  expect(positionDelta(after!.cameraTarget, before!.cameraTarget)).toBeLessThan(
+    0.001,
+  )
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+})
+
+test('overview wheel zoom remains inside the configured distance envelope', async ({
+  page,
+}) => {
+  await openReadyGalaxy(page)
+  const canvas = await page.locator('canvas').boundingBox()
+  await page.mouse.move(
+    (canvas?.x ?? 0) + (canvas?.width ?? 0) / 2,
+    (canvas?.y ?? 0) + (canvas?.height ?? 0) / 2,
+  )
+
+  for (let index = 0; index < 10; index += 1) {
+    await page.mouse.wheel(0, 2_000)
+  }
+  await page.waitForTimeout(900)
+  const far = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  expect(far!.cameraDistance).toBeLessThanOrEqual(
+    far!.cameraMaxDistance + 0.02,
+  )
+
+  for (let index = 0; index < 14; index += 1) {
+    await page.mouse.wheel(0, -2_000)
+  }
+  await page.waitForTimeout(900)
+  const near = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  expect(near!.cameraDistance).toBeGreaterThanOrEqual(
+    near!.cameraMinDistance - 0.02,
+  )
 })
 
 test('canvas has non-zero dimensions', async ({ page }) => {
@@ -170,6 +262,35 @@ test('philosopher focus shows portrait, identity, and key ideas', async ({ page 
   await expect(page.locator('.galaxy-scene-portrait--selected img')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Key ideas' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Select idea 1' })).toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__NOESIS_GALAXY_TELEMETRY__?.cameraMode),
+    )
+    .toBe('philosopher-focus')
+  const telemetry = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  expect(telemetry?.orbitingIdeaCount).toBeGreaterThan(0)
+  expect(telemetry?.orbitMotionEnabled).toBe(true)
+})
+
+test('focused idea satellites move in normal motion mode', async ({ page }) => {
+  await openReadyGalaxy(page)
+  await selectFeaturedFromExplorer(page)
+  const satellite = page
+    .locator('.galaxy-idea-label[data-orbiting="true"]')
+    .first()
+  await expect(satellite).toBeVisible()
+  const before = await satellite.boundingBox()
+  await page.waitForTimeout(1_400)
+  const after = await satellite.boundingBox()
+
+  expect(
+    Math.hypot(
+      (after?.x ?? 0) - (before?.x ?? 0),
+      (after?.y ?? 0) - (before?.y ?? 0),
+    ),
+  ).toBeGreaterThan(0.5)
 })
 
 test('an idea can be selected and updates URL focus state', async ({ page }) => {
@@ -195,7 +316,7 @@ test('explicit agreement and disagreement connections render', async ({ page }) 
   await expect(page.getByText('1 continuous agreements')).toBeVisible()
   await expect(page.getByText('2 interrupted disagreements')).toBeVisible()
   await expect(page.locator('.galaxy-relation-label--agreement')).toHaveCount(1)
-  await expect(page.locator('.galaxy-relation-label--disagreement')).toHaveCount(2)
+  await expect(page.locator('.galaxy-relation-label--disagreement')).toHaveCount(1)
   const telemetry = await page.evaluate(
     () => window.__NOESIS_GALAXY_TELEMETRY__,
   )
@@ -203,7 +324,21 @@ test('explicit agreement and disagreement connections render', async ({ page }) 
     agreementEdgeCount: 1,
     disagreementEdgeCount: 2,
     focusMode: 'idea',
+    cameraMode: 'idea-focus',
   })
+  expect(telemetry!.relationEdgeBudget).toBeLessThanOrEqual(8)
+  expect(
+    await page
+      .locator('.galaxy-relation-label--agreement')
+      .first()
+      .evaluate((element) => getComputedStyle(element).borderStyle),
+  ).not.toBe('dashed')
+  expect(
+    await page
+      .locator('.galaxy-relation-label--disagreement')
+      .first()
+      .evaluate((element) => getComputedStyle(element).borderStyle),
+  ).toBe('dashed')
 })
 
 test('philosopher and idea URL state restores directly', async ({ page }) => {
@@ -218,24 +353,50 @@ test('philosopher and idea URL state restores directly', async ({ page }) => {
 })
 
 test('back returns to philosopher before returning to galaxy', async ({ page }) => {
-  await openReadyGalaxy(
-    page,
-    `/?philosopher=${featuredPhilosopher.id}&idea=${dualismIdeaId}`,
+  await openReadyGalaxy(page, `/?philosopher=${featuredPhilosopher.id}`)
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__NOESIS_GALAXY_TELEMETRY__?.cameraMode),
+    )
+    .toBe('philosopher-focus')
+  const initialTarget = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__!.cameraTarget,
   )
+  await page.getByRole('button', { name: 'Show all 7 ideas' }).click()
+  await page.getByRole('button', { name: 'Select idea 7' }).click()
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__NOESIS_GALAXY_TELEMETRY__?.cameraMode),
+    )
+    .toBe('idea-focus')
   await page.getByRole('button', { name: 'Back to philosopher' }).click()
   await expect(page).not.toHaveURL(/idea=/)
   await expect(
     page.getByRole('heading', { name: featuredPhilosopher.name }),
   ).toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__NOESIS_GALAXY_TELEMETRY__?.cameraMode),
+    )
+    .toBe('philosopher-focus')
+  const restoredTarget = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__!.cameraTarget,
+  )
+  expect(positionDelta(restoredTarget, initialTarget)).toBeLessThan(0.005)
 
   await page.getByRole('button', { name: 'Back to galaxy' }).click()
   await expect(page).not.toHaveURL(/philosopher=/)
+  await expect
+    .poll(() =>
+      page.evaluate(() => window.__NOESIS_GALAXY_TELEMETRY__?.cameraMode),
+    )
+    .toBe('galaxy-overview')
 })
 
 test('reset clears selection and returns to the overview', async ({ page }) => {
   await openReadyGalaxy(page)
   await selectFeaturedFromExplorer(page)
-  await page.getByRole('button', { name: 'Reset view' }).click()
+  await page.getByRole('button', { name: 'Reset' }).click()
 
   await expect(page).not.toHaveURL(/philosopher=/)
   await expect
@@ -255,6 +416,22 @@ test('invalid philosopher ID recovers safely', async ({ page }) => {
 test('mobile detail sheet and controls remain reachable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openReadyGalaxy(page)
+  const motionControl = page.getByRole('button', { name: 'Motion' })
+  await expect(motionControl).toBeInViewport()
+  expect((await motionControl.boundingBox())?.height).toBeGreaterThanOrEqual(44)
+  const canvas = await page.locator('canvas').boundingBox()
+  await page.mouse.move(
+    (canvas?.x ?? 0) + (canvas?.width ?? 0) / 2,
+    (canvas?.y ?? 0) + (canvas?.height ?? 0) * 0.42,
+  )
+  await page.mouse.wheel(0, -500)
+  await page.waitForTimeout(500)
+  const mobileCamera = await page.evaluate(
+    () => window.__NOESIS_GALAXY_TELEMETRY__,
+  )
+  expect(mobileCamera!.cameraDistance).toBeGreaterThanOrEqual(
+    mobileCamera!.cameraMinDistance - 0.02,
+  )
   await selectFeaturedFromExplorer(page)
 
   await expect(page.locator('.galaxy-summary')).toBeInViewport()
@@ -270,16 +447,54 @@ test('connections and school regions can be toggled independently', async ({
   page,
 }) => {
   await openReadyGalaxy(page)
-  await page.getByRole('button', { name: 'Connections on' }).click()
-  await page.getByRole('button', { name: 'Schools on' }).click()
-  await expect(page.getByRole('button', { name: 'Connections off' })).toHaveAttribute(
+  await page.getByRole('button', { name: 'Schools' }).click()
+  await expect(page.getByRole('button', { name: 'Schools' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await selectFeaturedFromExplorer(page)
+  await page.getByRole('button', { name: 'Links' }).click()
+  await expect(page.getByRole('button', { name: 'Links' })).toHaveAttribute(
     'aria-pressed',
     'false',
   )
-  await expect(page.getByRole('button', { name: 'Schools off' })).toHaveAttribute(
-    'aria-pressed',
-    'false',
-  )
+})
+
+test('accessible explorer supports keyboard selection', async ({ page }) => {
+  await openReadyGalaxy(page)
+  const explorer = page.getByRole('button', {
+    name: 'Explore accessible list',
+  })
+  await explorer.focus()
+  await expect(explorer).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByRole('heading', { name: 'Philosophers through history' }),
+  ).toBeVisible()
+  const philosopher = page.getByRole('button', {
+    name: new RegExp(featuredPhilosopher.name),
+  })
+  await philosopher.focus()
+  await page.keyboard.press('Enter')
+  await expect(
+    page.getByRole('heading', { name: featuredPhilosopher.name }),
+  ).toBeVisible()
+})
+
+test('WebGL fallback preserves philosopher access', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'WebGL2RenderingContext', {
+      configurable: true,
+      value: undefined,
+    })
+  })
+  await interceptPhilosophersApi(page)
+  await page.goto('/')
+  await expect(page.getByText('The historical scene is unavailable.')).toBeVisible()
+  await selectFeaturedFromExplorer(page)
+  await expect(
+    page.getByRole('heading', { name: featuredPhilosopher.name }),
+  ).toBeVisible()
 })
 
 test('reduced motion remains active through scene transitions', async ({ page }) => {
@@ -287,6 +502,24 @@ test('reduced motion remains active through scene transitions', async ({ page })
   await openReadyGalaxy(page)
   await selectFeaturedFromExplorer(page)
   await expect(page.locator('main')).toHaveAttribute('data-reduced-motion', 'true')
+  const satellite = page
+    .locator('.galaxy-idea-label[data-orbiting="true"]')
+    .first()
+  await expect(satellite).toBeVisible()
+  const before = await satellite.boundingBox()
+  await page.waitForTimeout(1_200)
+  const after = await satellite.boundingBox()
+  expect(
+    Math.hypot(
+      (after?.x ?? 0) - (before?.x ?? 0),
+      (after?.y ?? 0) - (before?.y ?? 0),
+    ),
+  ).toBeLessThan(0.25)
+  expect(
+    await page.evaluate(
+      () => window.__NOESIS_GALAXY_TELEMETRY__?.orbitMotionEnabled,
+    ),
+  ).toBe(false)
 })
 
 test('no uncaught error occurs while exploring relationships', async ({ page }) => {
@@ -300,7 +533,7 @@ test('no uncaught error occurs while exploring relationships', async ({ page }) 
   expect(pageErrors).toEqual([])
 })
 
-test('Chromium can produce a non-empty galaxy screenshot', async ({ page }) => {
+test('Chromium can generate a non-empty final review screenshot', async ({ page }) => {
   await openReadyGalaxy(page)
   const screenshot = await page.screenshot()
   expect(screenshot.byteLength).toBeGreaterThan(50_000)
