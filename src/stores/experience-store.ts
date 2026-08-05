@@ -8,21 +8,24 @@ interface ExperienceState {
   labelsVisible: boolean
   eraGuidesVisible: boolean
   connectionsVisible: boolean
+  backgroundMotionEnabled: boolean
   cameraResetRequest: number
   setMode: (mode: ExperienceMode) => void
   setHoveredPhilosopherId: (id: string | null) => void
   toggleLabels: () => void
   toggleEraGuides: () => void
   toggleConnections: () => void
+  toggleBackgroundMotion: () => void
   requestCameraReset: () => void
 }
 
 export const useExperienceStore = create<ExperienceState>((set) => ({
-  mode: 'intro',
+  mode: 'explore',
   hoveredPhilosopherId: null,
-  labelsVisible: true,
+  labelsVisible: false,
   eraGuidesVisible: true,
   connectionsVisible: true,
+  backgroundMotionEnabled: true,
   cameraResetRequest: 0,
   setMode: (mode) => set({ mode }),
   setHoveredPhilosopherId: (id) =>
@@ -36,6 +39,10 @@ export const useExperienceStore = create<ExperienceState>((set) => ({
     set((state) => ({ eraGuidesVisible: !state.eraGuidesVisible })),
   toggleConnections: () =>
     set((state) => ({ connectionsVisible: !state.connectionsVisible })),
+  toggleBackgroundMotion: () =>
+    set((state) => ({
+      backgroundMotionEnabled: !state.backgroundMotionEnabled,
+    })),
   requestCameraReset: () =>
     set((state) => ({ cameraResetRequest: state.cameraResetRequest + 1 })),
 }))

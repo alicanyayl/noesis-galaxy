@@ -34,19 +34,48 @@ export function historicalPathProgress(year: number | null) {
   return segment.start + localProgress * (segment.end - segment.start)
 }
 
-export function historicalCurvePoint(progress: number): GalaxyPosition {
+export function createHistoricalSpiralPosition(
+  progress: number,
+): GalaxyPosition {
   if (progress > 1) {
-    return { x: 10.6, y: -5.2, z: -0.4 }
+    return { x: 9.8, y: -4.6, z: 0.25 }
   }
 
   const t = clamp(progress, 0, 1)
-  const angle = -Math.PI * 0.2 + t * Math.PI * 2.18
-  const radius = 1.15 + t * 8.75
+  const angle = -Math.PI * 0.42 + t * Math.PI * 4.72
+  const radius = 0.68 + Math.pow(t, 0.84) * 8.65
 
   return {
-    x: Math.cos(angle) * radius * 1.12,
-    y: Math.sin(angle) * radius * 0.68,
-    z: -1.15 + t * 2.3 + Math.sin(angle * 0.72) * 0.42,
+    x: Math.cos(angle) * radius * 1.08,
+    y: Math.sin(angle) * radius * 0.67,
+    z:
+      -0.82 +
+      t * 1.68 +
+      Math.sin(angle * 0.54) * 0.54 +
+      Math.cos(angle * 0.22) * 0.2,
+  }
+}
+
+export function historicalCurvePoint(progress: number): GalaxyPosition {
+  return createHistoricalSpiralPosition(progress)
+}
+
+export function createEchoArmPosition(
+  progress: number,
+  armIndex: 0 | 1,
+): GalaxyPosition {
+  const t = clamp(progress, 0, 1)
+  const source = createHistoricalSpiralPosition(t)
+  const rotation = armIndex === 0 ? Math.PI * 0.68 : -Math.PI * 0.64
+  const scale = armIndex === 0 ? 0.96 : 0.9
+  const cosine = Math.cos(rotation)
+  const sine = Math.sin(rotation)
+  const depthWave = Math.sin(t * Math.PI * 2.4 + armIndex * Math.PI) * 0.46
+
+  return {
+    x: (source.x * cosine - source.y * sine) * scale,
+    y: (source.x * sine + source.y * cosine) * scale,
+    z: source.z * 0.78 + depthWave - 0.72 - armIndex * 0.34,
   }
 }
 
@@ -69,5 +98,19 @@ export function sampleHistoricalCurve(
 ) {
   return Array.from({ length: segments + 1 }, (_, index) =>
     historicalCurvePoint(start + (end - start) * (index / segments)),
+  )
+}
+
+export function sampleEchoArm(
+  armIndex: 0 | 1,
+  start = 0,
+  end = 1,
+  segments = 88,
+) {
+  return Array.from({ length: segments + 1 }, (_, index) =>
+    createEchoArmPosition(
+      start + (end - start) * (index / segments),
+      armIndex,
+    ),
   )
 }

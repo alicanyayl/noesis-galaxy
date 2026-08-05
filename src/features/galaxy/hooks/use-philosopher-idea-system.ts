@@ -16,6 +16,7 @@ export function usePhilosopherIdeaSystem(
   philosopherId: string | null,
   selectedIdeaId: string | null,
   visibleIdeaLimit = MAX_VISIBLE_IDEAS,
+  relationLimit = MAX_VISIBLE_RELATIONS_PER_KIND,
 ) {
   const philosopherQuery = useQuery(
     philosopherQueryOptions(philosopherId ?? ''),
@@ -61,11 +62,14 @@ export function usePhilosopherIdeaSystem(
       agreeingIdeas: (selectedIdea?.agreeingKeyIdeaIds ?? [])
         .map((id) => ideasById.get(id))
         .filter((idea) => idea !== undefined)
-        .slice(0, MAX_VISIBLE_RELATIONS_PER_KIND),
+        .slice(0, relationLimit),
       disagreeingIdeas: (selectedIdea?.disagreeingKeyIdeaIds ?? [])
         .map((id) => ideasById.get(id))
         .filter((idea) => idea !== undefined)
-        .slice(0, MAX_VISIBLE_RELATIONS_PER_KIND),
+        .slice(0, relationLimit),
+      totalAgreementCount: selectedIdea?.agreeingKeyIdeaIds.length ?? 0,
+      totalDisagreementCount: selectedIdea?.disagreeingKeyIdeaIds.length ?? 0,
+      relationLimit,
       isLoading:
         philosopherQuery.isFetching ||
         ideasQuery.isFetching ||
@@ -80,5 +84,6 @@ export function usePhilosopherIdeaSystem(
     selectedIdeaQuery.data,
     selectedIdeaQuery.isFetching,
     visibleIdeaLimit,
+    relationLimit,
   ])
 }

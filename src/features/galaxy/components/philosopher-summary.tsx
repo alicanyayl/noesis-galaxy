@@ -31,6 +31,7 @@ interface PhilosopherSummaryPanelProps {
   onBackToPhilosopher: () => void
   onClose: () => void
   onExpandIdeas: () => void
+  onExpandRelations: () => void
   onSelectIdea: (id: string) => void
 }
 
@@ -44,7 +45,7 @@ function Portrait({ philosopher }: { philosopher: PhilosopherSummary }) {
 
   if (!imageUrl || failedUrl === imageUrl) {
     return (
-      <div className="grid size-20 shrink-0 place-items-center rounded-2xl border border-border bg-muted text-xl font-medium text-muted-foreground">
+      <div className="grid size-16 shrink-0 place-items-center rounded-full border border-border bg-muted text-lg font-medium text-muted-foreground">
         {philosopherInitials(philosopher)}
       </div>
     )
@@ -52,7 +53,7 @@ function Portrait({ philosopher }: { philosopher: PhilosopherSummary }) {
 
   return (
     <img
-      className="size-20 shrink-0 rounded-2xl border border-border object-cover"
+      className="size-16 shrink-0 rounded-full border border-border object-cover"
       src={imageUrl}
       alt=""
       loading="eager"
@@ -68,6 +69,7 @@ export function PhilosopherSummaryPanel({
   onBackToPhilosopher,
   onClose,
   onExpandIdeas,
+  onExpandRelations,
   onSelectIdea,
 }: PhilosopherSummaryPanelProps) {
   const detailQuery = useQuery(philosopherQueryOptions(philosopher?.id ?? ''))
@@ -105,11 +107,11 @@ export function PhilosopherSummaryPanel({
 
   return (
     <aside
-      className="galaxy-summary pointer-events-auto w-full max-w-md rounded-2xl border border-border/80 bg-background/88 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl"
+      className="galaxy-summary pointer-events-auto w-full max-w-sm rounded-2xl border border-border/60 bg-background/82 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl"
       aria-labelledby="selected-philosopher-title"
       aria-live="polite"
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         <Portrait philosopher={detail ?? philosopher} />
         <div className="min-w-0 flex-1">
           <p className="text-[0.65rem] font-medium tracking-[0.16em] text-accent uppercase">
@@ -117,7 +119,7 @@ export function PhilosopherSummaryPanel({
           </p>
           <h2
             id="selected-philosopher-title"
-            className="mt-1 text-xl font-medium tracking-tight"
+            className="mt-1 text-lg font-medium tracking-tight"
           >
             {philosopher.name}
           </h2>
@@ -181,10 +183,21 @@ export function PhilosopherSummaryPanel({
                 : ''}
             </div>
           </dl>
+          {ideaSystem.totalAgreementCount + ideaSystem.totalDisagreementCount >
+          ideaSystem.agreeingIdeas.length + ideaSystem.disagreeingIdeas.length ? (
+            <Button
+              className="mt-3 h-8 rounded-full text-xs"
+              size="sm"
+              variant="outline"
+              onClick={onExpandRelations}
+            >
+              Show more connections
+            </Button>
+          ) : null}
         </section>
       ) : null}
 
-      <dl className="mt-5 grid gap-3 text-sm">
+      <dl className="galaxy-summary-meta mt-4 grid gap-2 text-xs">
         <div>
           <dt className="text-muted-foreground">School cluster</dt>
           <dd className="mt-0.5 font-medium">

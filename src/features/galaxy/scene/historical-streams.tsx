@@ -1,211 +1,237 @@
-import { Html, Line } from '@react-three/drei'
+import { Html } from '@react-three/drei'
 import { useMemo } from 'react'
-import { AdditiveBlending, DoubleSide } from 'three'
+import { AdditiveBlending } from 'three'
 
-import { deterministicSigned } from '@/features/galaxy/layout/deterministic-hash'
 import {
+  deterministicSigned,
+  deterministicUnit,
+} from '@/features/galaxy/layout/deterministic-hash'
+import {
+  createEchoArmPosition,
   historicalCurvePoint,
   historicalPathProgress,
-  sampleHistoricalCurve,
 } from '@/features/galaxy/layout/historical-curve'
-import { HISTORICAL_ERAS } from '@/features/galaxy/layout/eras'
 import type { SceneQuality } from '@/features/galaxy/scene/scene-quality'
+import { SCENE_COLORS } from '@/features/galaxy/scene/scene-visuals'
 import {
-  GALAXY_VISUAL_CONFIG,
-  SCENE_COLORS,
-} from '@/features/galaxy/scene/scene-visuals'
+  SoftPointField,
+  type SoftPointData,
+} from '@/features/galaxy/scene/soft-point-field'
 
-function rotatePoint(
-  point: { x: number; y: number; z: number },
-  angle: number,
-  scale = 1,
-) {
-  const cosine = Math.cos(angle)
-  const sine = Math.sin(angle)
-
-  return {
-    x: (point.x * cosine - point.y * sine) * scale,
-    y: (point.x * sine + point.y * cosine) * scale,
-    z: point.z - 0.65,
-  }
+function softNoise(key: string, axis: string) {
+  return (
+    deterministicSigned(key, `${axis}:a`) +
+    deterministicSigned(key, `${axis}:b`) +
+    deterministicSigned(key, `${axis}:c`)
+  ) / 3
 }
 
 function createArmDust(
   count: number,
   salt: string,
-  rotation: number,
-  scale: number,
-) {
+  armIndex: -1 | 0 | 1,
+): SoftPointData {
   const positions = new Float32Array(count * 3)
+  const sizes = new Float32Array(count)
+  const brightness = new Float32Array(count)
 
   for (let index = 0; index < count; index += 1) {
     const key = `${salt}:${index}`
-    const progress = (index + 0.5) / count
-    const point = rotatePoint(
-      historicalCurvePoint(progress),
-      rotation,
-      scale,
-    )
-    const spread = 0.22 + progress * 0.78
-    positions[index * 3] =
-      point.x + deterministicSigned(key, 'x') * spread
-    positions[index * 3 + 1] =
-      point.y + deterministicSigned(key, 'y') * spread * 0.55
+    const progress = Math.pow(deterministicUnit(key, 'progress'), 0.94)
+    const point =
+      armIndex === -1
+        ? historicalCurvePoint(progress)
+        : createEchoArmPosition(progress, armIndex)
+    const spread = 0.22 + Math.sin(progress * Math.PI) * 0.42 + progress * 0.3
+
+    positions[index * 3] = point.x + softNoise(key, 'x') * spread * 1.34
+    positions[index * 3 + 1] = point.y + softNoise(key, 'y') * spread * 0.7
     positions[index * 3 + 2] =
-      point.z + deterministicSigned(key, 'z') * (0.22 + progress * 0.4)
+      point.z + softNoise(key, 'z') * (0.38 + progress * 0.7)
+    sizes[index] =
+      0.09 + Math.pow(deterministicUnit(key, 'size'), 2.1) * (armIndex < 0 ? 0.39 : 0.3)
+    brightness[index] =
+      (armIndex < 0 ? 0.52 : 0.4) + deterministicUnit(key, 'light') * 0.46
   }
 
-  return positions
+  return { positions, sizes, brightness }
 }
 
-const ERA_PROGRESS = [
-  { label: 'Ancient core', year: -250, align: 'core' },
-  { label: 'Medieval orbit', year: 1_000, align: 'inner' },
-  { label: 'Early modern turn', year: 1_650, align: 'turn' },
-  { label: 'Modern expansion', year: 1_872, align: 'outer' },
-  { label: 'Contemporary frontier', year: 2_005, align: 'frontier' },
+function createCoreDust(count: number): SoftPointData {
+  const positions = new Float32Array(count * 3)
+  const sizes = new Float32Array(count)
+  const brightness = new Float32Array(count)
+
+  for (let index = 0; index < count; index += 1) {
+    const key = `core-dust:${index}`
+    const radius = Math.pow(deterministicUnit(key, 'radius'), 1.8) * 2.8
+    const angle = deterministicUnit(key, 'angle') * Math.PI * 2
+    positions[index * 3] = Math.cos(angle) * radius * 1.18
+    positions[index * 3 + 1] = Math.sin(angle) * radius * 0.58
+    positions[index * 3 + 2] = deterministicSigned(key, 'z') * (0.28 + radius * 0.12) - 0.45
+    sizes[index] = 0.11 + deterministicUnit(key, 'size') * 0.5
+    brightness[index] = 0.5 + deterministicUnit(key, 'brightness') * 0.62
+  }
+
+  return { positions, sizes, brightness }
+}
+
+function createArmHaze(
+  count: number,
+  salt: string,
+  armIndex: -1 | 0 | 1,
+): SoftPointData {
+  const positions = new Float32Array(count * 3)
+  const sizes = new Float32Array(count)
+  const brightness = new Float32Array(count)
+
+  for (let index = 0; index < count; index += 1) {
+    const key = `${salt}:haze:${index}`
+    const progress = Math.pow(deterministicUnit(key, 'progress'), 0.9)
+    const point =
+      armIndex === -1
+        ? historicalCurvePoint(progress)
+        : createEchoArmPosition(progress, armIndex)
+    const spread = 0.3 + Math.sin(progress * Math.PI) * 0.48 + progress * 0.28
+
+    positions[index * 3] = point.x + softNoise(key, 'x') * spread * 1.5
+    positions[index * 3 + 1] = point.y + softNoise(key, 'y') * spread * 0.76
+    positions[index * 3 + 2] =
+      point.z + softNoise(key, 'z') * (0.58 + progress * 0.82)
+    sizes[index] = 0.7 + deterministicUnit(key, 'size') * 1.35
+    brightness[index] = 0.4 + deterministicUnit(key, 'light') * 0.4
+  }
+
+  return { positions, sizes, brightness }
+}
+
+function createCoreHaze(count: number): SoftPointData {
+  const positions = new Float32Array(count * 3)
+  const sizes = new Float32Array(count)
+  const brightness = new Float32Array(count)
+
+  for (let index = 0; index < count; index += 1) {
+    const key = `core-haze:${index}`
+    const radius = Math.pow(deterministicUnit(key, 'radius'), 1.55) * 2.4
+    const angle = deterministicUnit(key, 'angle') * Math.PI * 2
+    positions[index * 3] = Math.cos(angle) * radius * 1.16
+    positions[index * 3 + 1] = Math.sin(angle) * radius * 0.55
+    positions[index * 3 + 2] = deterministicSigned(key, 'z') * 0.58 - 0.48
+    sizes[index] = 1.1 + deterministicUnit(key, 'size') * 2.6
+    brightness[index] = 0.42 + deterministicUnit(key, 'brightness') * 0.5
+  }
+
+  return { positions, sizes, brightness }
+}
+
+const ERA_MARKERS = [
+  { label: 'Ancient', year: -250 },
+  { label: 'Modern', year: 1_872 },
+  { label: 'Contemporary', year: 2_005 },
 ] as const
 
-export function HistoricalStreams({ quality }: { quality: SceneQuality }) {
-  const mainPath = useMemo(() => sampleHistoricalCurve(), [])
-  const echoArms = useMemo(
-    () => [
-      sampleHistoricalCurve(0, 1, 80).map((point) =>
-        rotatePoint(point, Math.PI * 0.72, 0.96),
-      ),
-      sampleHistoricalCurve(0, 1, 80).map((point) =>
-        rotatePoint(point, -Math.PI * 0.67, 0.9),
-      ),
-    ],
-    [],
-  )
+export function HistoricalStreams({
+  focused,
+  quality,
+}: {
+  focused: boolean
+  quality: SceneQuality
+}) {
   const dustFields = useMemo(
     () => [
-      createArmDust(quality.armDustCount, 'history', 0, 1),
-      createArmDust(
-        Math.floor(quality.armDustCount * 0.72),
-        'echo-a',
-        Math.PI * 0.72,
-        0.96,
-      ),
-      createArmDust(
-        Math.floor(quality.armDustCount * 0.64),
-        'echo-b',
-        -Math.PI * 0.67,
-        0.9,
-      ),
+      createArmDust(quality.armDustCount, 'history', -1),
+      createArmDust(Math.floor(quality.armDustCount * 0.74), 'echo-a', 0),
+      createArmDust(Math.floor(quality.armDustCount * 0.62), 'echo-b', 1),
     ],
+    [quality.armDustCount],
+  )
+  const coreDust = useMemo(
+    () => createCoreDust(Math.max(260, Math.floor(quality.armDustCount * 0.42))),
+    [quality.armDustCount],
+  )
+  const hazeFields = useMemo(
+    () => [
+      createArmHaze(Math.max(620, Math.floor(quality.armDustCount * 1.2)), 'history', -1),
+      createArmHaze(Math.max(380, Math.floor(quality.armDustCount * 0.75)), 'echo-a', 0),
+      createArmHaze(Math.max(320, Math.floor(quality.armDustCount * 0.65)), 'echo-b', 1),
+    ],
+    [quality.armDustCount],
+  )
+  const coreHaze = useMemo(
+    () => createCoreHaze(Math.max(100, Math.floor(quality.armDustCount * 0.13))),
     [quality.armDustCount],
   )
 
   return (
     <group>
-      <group position={[0.55, -0.2, -1.2]}>
-        <mesh scale={[2.5, 1.3, 0.42]}>
-          <sphereGeometry args={[1, 40, 24]} />
+      <group position={[0, 0, -0.45]}>
+        <SoftPointField
+          color={SCENE_COLORS.coreGlow}
+          data={coreHaze}
+          maxPointSize={22}
+          opacity={focused ? 0.045 : 0.18}
+        />
+        <SoftPointField
+          color={SCENE_COLORS.streamBright}
+          data={coreDust}
+          maxPointSize={4.5}
+          opacity={focused ? 0.16 : 0.42}
+        />
+        <mesh position={[0, 0, 0.22]}>
+          <sphereGeometry args={[0.11, 20, 16]} />
+          <meshBasicMaterial
+            color={SCENE_COLORS.streamBright}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[0, 0, 0.2]} scale={3.4}>
+          <sphereGeometry args={[0.11, 18, 14]} />
           <meshBasicMaterial
             blending={AdditiveBlending}
             color={SCENE_COLORS.coreGlow}
             depthWrite={false}
-            opacity={0.15}
+            opacity={focused ? 0.06 : 0.15}
             toneMapped={false}
             transparent
           />
         </mesh>
-        {[1.5, 2.05, 2.65].map((radius, index) => (
-          <mesh key={radius} rotation={[0, 0, index * 0.32]} scale={[1, 0.48, 1]}>
-            <ringGeometry args={[radius, radius + 0.035, 96]} />
-            <meshBasicMaterial
-              color={index === 1 ? SCENE_COLORS.streamCyan : SCENE_COLORS.streamViolet}
-              opacity={0.2 - index * 0.035}
-              side={DoubleSide}
-              transparent
-              depthWrite={false}
-            />
-          </mesh>
-        ))}
       </group>
 
-      {echoArms.map((points, index) => (
-        <Line
-          key={index}
-          points={points.map((point) => [point.x, point.y, point.z])}
-          color={index === 0 ? SCENE_COLORS.streamViolet : SCENE_COLORS.streamCyan}
-          lineWidth={1.4}
-          opacity={0.18}
-          transparent
+      {hazeFields.map((data, index) => (
+        <SoftPointField
+          key={`haze-${index}`}
+          color={index === 0 ? SCENE_COLORS.streamBright : index === 1 ? SCENE_COLORS.streamCyan : SCENE_COLORS.streamViolet}
+          data={data}
+          maxPointSize={index === 0 ? 15 : 12}
+          opacity={focused ? 0.03 : index === 0 ? 0.14 : 0.085}
         />
       ))}
 
-      <Line
-        points={mainPath.map((point) => [point.x, point.y, point.z])}
-        color={SCENE_COLORS.streamGlow}
-        lineWidth={GALAXY_VISUAL_CONFIG.streamGlowWidth}
-        opacity={0.14}
-        transparent
-      />
-      <Line
-        points={mainPath.map((point) => [point.x, point.y, point.z + 0.02])}
-        color={SCENE_COLORS.streamBright}
-        lineWidth={GALAXY_VISUAL_CONFIG.streamCoreWidth}
-        opacity={0.86}
-        transparent
-      />
-
-      {HISTORICAL_ERAS.filter((era) => era.id !== 'unknown').map(
-        (era, index) => {
-          const startYear = era.minimumYear ?? -650
-          const endYear = era.maximumYear ?? 2_025
-          const segment = sampleHistoricalCurve(
-            historicalPathProgress(startYear),
-            historicalPathProgress(endYear),
-            24,
-          )
-
-          return (
-            <Line
-              key={era.id}
-              points={segment.map((point) => [point.x, point.y, point.z + 0.05])}
-              color={index % 2 === 0 ? SCENE_COLORS.streamCyan : SCENE_COLORS.streamViolet}
-              lineWidth={2.2}
-              opacity={0.52}
-              transparent
-            />
-          )
-        },
-      )}
-
-      {dustFields.map((positions, index) => (
-        <points key={index}>
-          <bufferGeometry>
-            <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-          </bufferGeometry>
-          <pointsMaterial
-            blending={AdditiveBlending}
-            color={index === 1 ? SCENE_COLORS.streamViolet : SCENE_COLORS.streamCyan}
-            depthWrite={false}
-            opacity={index === 0 ? 0.36 : 0.18}
-            size={index === 0 ? 0.072 : 0.054}
-            sizeAttenuation
-            toneMapped={false}
-            transparent
-          />
-        </points>
+      {dustFields.map((data, index) => (
+        <SoftPointField
+          key={index}
+          color={index === 0 ? SCENE_COLORS.streamBright : index === 1 ? SCENE_COLORS.streamCyan : SCENE_COLORS.streamViolet}
+          data={data}
+          maxPointSize={index === 0 ? 4.2 : 3.6}
+          opacity={focused ? 0.12 : index === 0 ? 0.5 : 0.3}
+        />
       ))}
 
-      {ERA_PROGRESS.map((era, index) => {
-        const point = historicalCurvePoint(historicalPathProgress(era.year))
-        return (
-          <Html
-            key={era.align}
-            center
-            position={[point.x, point.y + 0.58 + (index % 2) * 0.16, point.z]}
-            style={{ pointerEvents: 'none' }}
-          >
-            <span className="galaxy-era-label">{era.label}</span>
-          </Html>
-        )
-      })}
+      {!focused
+        ? ERA_MARKERS.map((era) => {
+            const point = historicalCurvePoint(historicalPathProgress(era.year))
+            return (
+              <Html
+                key={era.label}
+                center
+                position={[point.x, point.y + 0.46, point.z]}
+                style={{ pointerEvents: 'none' }}
+              >
+                <span className="galaxy-era-label">{era.label}</span>
+              </Html>
+            )
+          })
+        : null}
     </group>
   )
 }

@@ -1,10 +1,9 @@
-import { Html } from '@react-three/drei'
+import { Html, Line } from '@react-three/drei'
 import { useMemo } from 'react'
-import { DoubleSide } from 'three'
 
 import type { SceneQuality } from '@/features/galaxy/scene/scene-quality'
 import {
-  GUIDE_VISUAL_CONFIG,
+  GALAXY_VISUAL_CONFIG,
   SCENE_COLORS,
 } from '@/features/galaxy/scene/scene-visuals'
 import type { GalaxyPhilosopherNode } from '@/features/galaxy/types/galaxy'
@@ -84,32 +83,31 @@ export function SchoolLabels({ nodes, quality }: SchoolLabelsProps) {
 
   return labels.map((label, index) => (
     <group key={label.key}>
-      <mesh
-        position={[label.x, label.y, label.z - 0.45]}
-        scale={[label.radiusX, label.radiusY, 1]}
-      >
-        <ringGeometry args={[0.965, 1, 64]} />
-        <meshBasicMaterial
-          color={SCENE_COLORS.structural}
-          opacity={GUIDE_VISUAL_CONFIG.clusterOpacity}
-          side={DoubleSide}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
+      <Line
+        points={Array.from({ length: 18 }, (_, pointIndex) => {
+          const angle = -Math.PI * 0.82 + (pointIndex / 17) * Math.PI * 1.18
+          return [
+            label.x + Math.cos(angle) * label.radiusX,
+            label.y + Math.sin(angle) * label.radiusY,
+            label.z - 0.34 + Math.sin(angle * 2) * 0.08,
+          ] as [number, number, number]
+        })}
+        color={SCENE_COLORS.structuralBright}
+        lineWidth={GALAXY_VISUAL_CONFIG.schoolArcWidth}
+        opacity={0.2}
+        transparent
+      />
       <Html
         center
         position={[
           label.x,
-          label.y + label.radiusY + 0.28 + (index % 2) * 0.16,
+          label.y + label.radiusY + 0.2 + (index % 2) * 0.12,
           label.z,
         ]}
         style={{ pointerEvents: 'none' }}
       >
         <span className="galaxy-school-label">
           {label.label}
-          <span aria-hidden="true"> · </span>
-          {label.count}
         </span>
       </Html>
     </group>

@@ -20,6 +20,7 @@ import { useGalaxyPhilosophers } from '@/features/galaxy/hooks/use-galaxy-philos
 import { usePhilosopherIdeaSystem } from '@/features/galaxy/hooks/use-philosopher-idea-system'
 import { classifyHistoricalEra } from '@/features/galaxy/layout/eras'
 import { MAX_VISIBLE_IDEAS } from '@/features/galaxy/layout/idea-system'
+import { relationLimitForExpandedState } from '@/features/galaxy/layout/relationship-budgets'
 import type { GalaxyTelemetry } from '@/features/galaxy/types/galaxy'
 import { useExperienceStore } from '@/stores/experience-store'
 
@@ -52,7 +53,7 @@ function DevelopmentDiagnostics() {
 
   return (
     <details
-      className="pointer-events-auto hidden w-full max-w-md rounded-xl border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md sm:block"
+      className="galaxy-diagnostics pointer-events-auto hidden w-full max-w-md rounded-xl border border-border/60 bg-background/55 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md sm:block"
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
       <summary className="cursor-pointer font-medium text-foreground">
@@ -77,6 +78,7 @@ export function HistoricalGalaxyExperience() {
   const nodes = useGalaxyPhilosophers(philosophers)
   const [telemetry, setTelemetry] = useState<GalaxyTelemetry | null>(null)
   const [visibleIdeaLimit, setVisibleIdeaLimit] = useState(MAX_VISIBLE_IDEAS)
+  const [relationsExpanded, setRelationsExpanded] = useState(false)
   const requestedPhilosopherId = search.philosopher?.trim() || null
   const selectedPhilosopher =
     philosophers.find(
@@ -93,6 +95,7 @@ export function HistoricalGalaxyExperience() {
     selectedPhilosopher?.id ?? null,
     requestedIdeaId,
     visibleIdeaLimit,
+    relationLimitForExpandedState(relationsExpanded),
   )
   const prefersReducedMotion = useReducedMotion() ?? false
   const mode = useExperienceStore((state) => state.mode)
@@ -109,6 +112,7 @@ export function HistoricalGalaxyExperience() {
   const selectPhilosopher = useCallback(
     (id: string) => {
       setVisibleIdeaLimit(MAX_VISIBLE_IDEAS)
+      setRelationsExpanded(false)
       void navigate({ search: { philosopher: id } })
       setMode('explore')
     },
@@ -118,6 +122,7 @@ export function HistoricalGalaxyExperience() {
   const selectIdea = useCallback(
     (id: string) => {
       if (!selectedPhilosopher) return
+      setRelationsExpanded(false)
       void navigate({
         search: { philosopher: selectedPhilosopher.id, idea: id },
       })
@@ -128,6 +133,7 @@ export function HistoricalGalaxyExperience() {
   const selectRelatedIdea = useCallback(
     (philosopherId: string, ideaId: string) => {
       setVisibleIdeaLimit(MAX_VISIBLE_IDEAS)
+      setRelationsExpanded(false)
       void navigate({ search: { philosopher: philosopherId, idea: ideaId } })
       setMode('explore')
     },
@@ -146,7 +152,7 @@ export function HistoricalGalaxyExperience() {
 
   const resetView = useCallback(() => {
     clearSelection()
-    setMode('intro')
+    setMode('explore')
   }, [clearSelection, setMode])
 
   const handleTelemetry = useCallback((nextTelemetry: GalaxyTelemetry) => {
@@ -209,20 +215,20 @@ export function HistoricalGalaxyExperience() {
         </p>
       ) : null}
 
-      <div className="pointer-events-none relative z-20 mx-auto flex min-h-svh w-full max-w-[100rem] flex-col px-4 py-4 sm:px-7 sm:py-6 lg:px-10">
+      <div className="pointer-events-none relative z-20 mx-auto flex min-h-svh w-full max-w-[110rem] flex-col px-3 py-3 sm:px-6 sm:py-5 lg:px-8">
         <header className="pointer-events-auto flex items-center justify-between gap-3">
           <a
-            className="inline-flex items-center gap-2.5 rounded-md text-sm font-medium tracking-[0.04em] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center gap-2 rounded-md text-xs font-medium tracking-[0.06em] outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm"
             href="/"
             aria-label="Noesis Galaxy home"
           >
-            <span className="grid size-7 place-items-center rounded-full border border-accent/35 bg-surface/75 text-accent shadow-[0_0_24px_rgba(168,178,255,0.18)]">
+            <span className="grid size-6 place-items-center rounded-full border border-accent/30 bg-surface/55 text-accent shadow-[0_0_20px_rgba(168,178,255,0.14)]">
               <Orbit className="size-3.5" aria-hidden="true" />
             </span>
             <span>Noesis Galaxy</span>
           </a>
           <div
-            className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/70 px-3 py-1.5 text-[0.62rem] font-medium tracking-[0.14em] text-muted-foreground uppercase backdrop-blur-md"
+            className="inline-flex items-center gap-2 rounded-full border border-border/55 bg-surface/45 px-2.5 py-1 text-[0.55rem] font-medium tracking-[0.13em] text-muted-foreground uppercase backdrop-blur-md"
             role="status"
           >
             <span
@@ -241,10 +247,10 @@ export function HistoricalGalaxyExperience() {
           </div>
         </header>
 
-        <div className="mt-5 flex flex-1 flex-col justify-between gap-8 sm:mt-8">
-          <div className="flex max-w-md flex-col items-start gap-3">
+        <div className="mt-4 flex flex-1 flex-col justify-between gap-5 sm:mt-6">
+          <div className="flex max-w-xs flex-col items-start gap-2">
             <section
-              className="galaxy-intro pointer-events-auto rounded-2xl border border-border/65 bg-background/64 px-4 py-3.5 backdrop-blur-xl sm:px-5 sm:py-4"
+              className={`galaxy-intro pointer-events-auto rounded-2xl border border-border/35 bg-background/35 px-3 py-2.5 backdrop-blur-lg sm:px-3.5${selectedPhilosopher ? ' hidden' : ''}`}
               aria-labelledby="page-title"
             >
               <p className="text-[0.63rem] font-medium tracking-[0.2em] text-accent uppercase">
@@ -252,17 +258,18 @@ export function HistoricalGalaxyExperience() {
               </p>
               <h1
                 id="page-title"
-                className="mt-1.5 text-2xl font-medium tracking-[-0.04em] sm:text-3xl"
+                className="mt-1 text-lg font-medium tracking-[-0.04em] sm:text-xl"
               >
                 Follow the arc of thought
               </h1>
-              <p className="mt-2 max-w-md text-xs leading-5 text-foreground/78 sm:text-sm sm:leading-6">
-                History spirals from the ancient core into an expanding
-                frontier. Constellation proximity marks shared school metadata,
-                not direct influence.
+              <p className="mt-1.5 max-w-xs text-[0.68rem] leading-4 text-foreground/62 sm:text-xs sm:leading-5">
+                A living cosmos of thinkers, ordered from the ancient core to
+                the contemporary frontier.
               </p>
             </section>
-            <div className="pointer-events-auto w-full">
+            <div
+              className={`pointer-events-auto${selectedPhilosopher ? ' hidden' : ''}`}
+            >
               <EraLegend />
             </div>
 
@@ -291,16 +298,12 @@ export function HistoricalGalaxyExperience() {
             ) : null}
           </div>
 
-          <div className="grid items-end gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
+          <div className="grid items-end gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,21rem)]">
             <div className="flex flex-col items-start gap-2.5">
               <div className="pointer-events-auto flex flex-wrap gap-2">
                 <SceneControls
-                  active={isActive}
                   hasSelection={selectedPhilosopher !== null}
                   onReset={resetView}
-                  onToggleActive={() =>
-                    setMode(isActive ? 'intro' : 'explore')
-                  }
                 />
                 <AccessiblePhilosopherList
                   philosophers={philosophers}
@@ -309,7 +312,7 @@ export function HistoricalGalaxyExperience() {
                   disabled={!philosophersQuery.isSuccess || philosophers.length === 0}
                 />
               </div>
-              <p className="pointer-events-auto hidden max-w-2xl text-[0.68rem] leading-5 text-muted-foreground sm:block">
+              <p className="sr-only">
                 Drag to orbit, scroll or pinch to zoom, hover or tap a luminous
                 thinker, and reset to return to the complete historical span.
               </p>
@@ -327,6 +330,7 @@ export function HistoricalGalaxyExperience() {
                   onExpandIdeas={() =>
                     setVisibleIdeaLimit(ideaSystem.totalIdeaCount)
                   }
+                  onExpandRelations={() => setRelationsExpanded(true)}
                   onSelectIdea={selectIdea}
                 />
               </Suspense>

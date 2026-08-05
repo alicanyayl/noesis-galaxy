@@ -98,6 +98,9 @@ export function GalaxyCanvas({
   const connectionsVisible = useExperienceStore(
     (state) => state.connectionsVisible,
   )
+  const backgroundMotionEnabled = useExperienceStore(
+    (state) => state.backgroundMotionEnabled,
+  )
 
   if (!isWebGLAvailable) {
     return <SceneFallback />
@@ -111,6 +114,7 @@ export function GalaxyCanvas({
           active ? 'galaxy-canvas galaxy-canvas--active' : 'galaxy-canvas'
         }
         role="img"
+        style={{ touchAction: 'none' }}
         camera={{ fov: 42, near: 0.1, far: 220, position: [0, 0, 20] }}
         dpr={[1, 1.5]}
         fallback={<SceneFallback />}
@@ -138,6 +142,7 @@ export function GalaxyCanvas({
           labelsVisible={labelsVisible}
           cameraResetRequest={cameraResetRequest}
           connectionsVisible={connectionsVisible}
+          backgroundMotionEnabled={backgroundMotionEnabled}
         />
       </Canvas>
     </SceneBoundary>

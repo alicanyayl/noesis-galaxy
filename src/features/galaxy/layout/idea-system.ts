@@ -4,8 +4,8 @@ import type {
   GalaxyPosition,
 } from '@/features/galaxy/types/galaxy'
 
-export const MAX_VISIBLE_IDEAS = 6
-export const MAX_VISIBLE_RELATIONS_PER_KIND = 4
+export const MAX_VISIBLE_IDEAS = 5
+export const MAX_VISIBLE_RELATIONS_PER_KIND = 3
 
 export function createIdeaNodes(
   ideas: readonly KeyIdea[],

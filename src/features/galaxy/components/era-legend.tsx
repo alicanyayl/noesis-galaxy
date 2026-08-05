@@ -3,36 +3,25 @@ import { HISTORICAL_ERAS } from '@/features/galaxy/layout/eras'
 export function EraLegend() {
   return (
     <section
-      className="galaxy-era-legend rounded-xl border border-border/70 bg-background/50 px-3 py-2.5 backdrop-blur-md"
+      className="galaxy-era-legend inline-flex rounded-full border border-border/45 bg-background/30 px-2.5 py-1.5 backdrop-blur-md"
       aria-labelledby="era-legend-title"
     >
-      <h2
-        id="era-legend-title"
-        className="text-[0.62rem] font-medium tracking-[0.16em] text-muted-foreground uppercase"
-      >
+      <h2 id="era-legend-title" className="sr-only">
         Historical direction
       </h2>
-      <p className="mt-1 text-[0.64rem] text-muted-foreground">
-        BCE <span aria-hidden="true">→</span> CE
-      </p>
-      <ol className="mt-2 flex max-w-xl flex-wrap items-center gap-x-2 gap-y-1.5">
-        {HISTORICAL_ERAS.map((era) => (
+      <ol className="flex items-center gap-2.5">
+        {HISTORICAL_ERAS.filter((era) => era.id !== 'unknown').map((era) => (
           <li
             key={era.id}
-            className="inline-flex items-center gap-1.5 text-[0.68rem] text-foreground/75"
+            className="inline-flex items-center gap-1 text-[0.56rem] tracking-[0.08em] text-foreground/55 uppercase"
             title={era.description}
           >
             <span
-              className="size-1.5 rounded-full ring-1 ring-white/15"
-              style={{ backgroundColor: era.color }}
+              className="size-1 rounded-full shadow-[0_0_8px_currentColor]"
+              style={{ backgroundColor: era.color, color: era.color }}
               aria-hidden="true"
             />
-            {era.label}
-            {era.id !== 'unknown' && era.id !== 'contemporary' ? (
-              <span className="text-muted-foreground/55" aria-hidden="true">
-                →
-              </span>
-            ) : null}
+            <span className="hidden sm:inline">{era.label}</span>
           </li>
         ))}
       </ol>

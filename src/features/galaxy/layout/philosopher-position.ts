@@ -12,6 +12,27 @@ import {
   historicalPathProgress,
 } from './historical-curve'
 import { getSchoolCluster } from './school-clusters'
+import { createPhilosopherNodeVariant } from './node-variant'
+
+export function createSchoolArcOffset(
+  philosopherId: string,
+  schoolKey: string,
+  pathProgress: number,
+) {
+  const band = deterministicSigned(schoolKey, 'curve-band') * 0.68
+  const local = deterministicSigned(
+    philosopherId,
+    `${schoolKey}:local-band`,
+  ) * 0.42
+  const arc = Math.sin(pathProgress * Math.PI * 5.4 + band) * 0.2
+
+  return {
+    lateral: band + local + arc,
+    depth:
+      deterministicSigned(schoolKey, 'curve-depth') * 0.62 +
+      deterministicSigned(philosopherId, `${schoolKey}:local-depth`) * 0.72,
+  }
+}
 
 export function createPhilosopherGalaxyPosition(
   philosopher: PhilosopherSummary,
@@ -21,18 +42,16 @@ export function createPhilosopherGalaxyPosition(
   const point = historicalCurvePoint(pathProgress)
   const tangent = historicalCurveTangent(Math.min(pathProgress, 1))
   const normal = { x: -tangent.y, y: tangent.x }
-  const schoolBand = deterministicSigned(cluster.key, 'curve-band') * 0.62
-  const localBand =
-    deterministicSigned(philosopher.id, `${cluster.key}:local-band`) * 0.38
-  const offset = schoolBand + localBand
+  const offset = createSchoolArcOffset(
+    philosopher.id,
+    cluster.key,
+    pathProgress,
+  )
 
   return {
-    x: point.x + normal.x * offset,
-    y: point.y + normal.y * offset,
-    z:
-      point.z +
-      deterministicSigned(cluster.key, 'curve-depth') * 0.28 +
-      deterministicSigned(philosopher.id, `${cluster.key}:local-depth`) * 0.36,
+    x: point.x + normal.x * offset.lateral,
+    y: point.y + normal.y * offset.lateral,
+    z: point.z + offset.depth,
   }
 }
 
@@ -51,6 +70,7 @@ export function createGalaxyPhilosopherNode(
     schoolKey: cluster.key,
     schoolLabel: cluster.label,
     pathProgress,
+    variant: createPhilosopherNodeVariant(philosopher),
   }
 }
 

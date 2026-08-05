@@ -7,6 +7,18 @@ export interface GalaxyPosition {
   z: number
 }
 
+export type PhilosopherNodeVariant =
+  | 'stellar'
+  | 'ringed'
+  | 'corona'
+  | 'binary'
+  | 'crystalline'
+
+export type CameraMode =
+  | 'galaxy-overview'
+  | 'philosopher-focus'
+  | 'idea-focus'
+
 export interface GalaxyPhilosopherNode {
   philosopher: PhilosopherSummary
   position: GalaxyPosition
@@ -15,6 +27,7 @@ export interface GalaxyPhilosopherNode {
   schoolKey: string
   schoolLabel: string
   pathProgress: number
+  variant: PhilosopherNodeVariant
 }
 
 export type IdeaRelationKind = 'owner' | 'agreement' | 'disagreement'
@@ -31,6 +44,9 @@ export interface GalaxyIdeaSystem {
   selectedIdea: KeyIdea | null
   agreeingIdeas: KeyIdea[]
   disagreeingIdeas: KeyIdea[]
+  totalAgreementCount: number
+  totalDisagreementCount: number
+  relationLimit: number
   isLoading: boolean
 }
 
@@ -48,6 +64,19 @@ export interface GalaxyTelemetry {
   disagreementEdgeCount: number
   drawCalls: number
   focusMode: 'galaxy' | 'philosopher' | 'idea'
+  cameraMode: CameraMode
+  cameraTarget: GalaxyPosition
+  cameraMinDistance: number
+  cameraMaxDistance: number
+  dollyToCursor: false
+  distantStarCount: number
+  midStarCount: number
+  foregroundDustCount: number
+  backgroundStarCount: number
+  supernovaCount: number
+  orbitingIdeaCount: number
+  orbitMotionEnabled: boolean
+  relationEdgeBudget: number
   interactionTarget?: {
     philosopherId: string
     screenX: number
