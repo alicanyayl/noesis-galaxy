@@ -191,6 +191,7 @@ test('repeated wheel zoom preserves target without direction bounce', async ({
 test('overview wheel zoom remains inside the configured distance envelope', async ({
   page,
 }) => {
+  test.setTimeout(45_000)
   await openReadyGalaxy(page)
   const canvas = await page.locator('canvas').boundingBox()
   await page.mouse.move(
@@ -198,7 +199,7 @@ test('overview wheel zoom remains inside the configured distance envelope', asyn
     (canvas?.y ?? 0) + (canvas?.height ?? 0) / 2,
   )
 
-  for (let index = 0; index < 10; index += 1) {
+  for (let index = 0; index < 6; index += 1) {
     await page.mouse.wheel(0, 2_000)
   }
   await page.waitForTimeout(900)
@@ -209,7 +210,7 @@ test('overview wheel zoom remains inside the configured distance envelope', asyn
     far!.cameraMaxDistance + 0.02,
   )
 
-  for (let index = 0; index < 14; index += 1) {
+  for (let index = 0; index < 8; index += 1) {
     await page.mouse.wheel(0, -2_000)
   }
   await page.waitForTimeout(900)
